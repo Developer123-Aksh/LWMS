@@ -8,7 +8,7 @@ class UserService {
     if (user == null) return null;
 
     final res = await _client
-        .from('user_profile')
+        .from('users')
         .select()
         .eq('id', user.id)
         .maybeSingle();

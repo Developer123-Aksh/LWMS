@@ -6,22 +6,19 @@ import 'supervisor_payments_page.dart';
 import 'supervisor_transactions_page.dart';
 import '../theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupervisorLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const SupervisorLayout({
-    super.key,
-    required this.title,
-    required this.child,
-  });
+  const SupervisorLayout({super.key, required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -91,7 +88,9 @@ class SupervisorLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const SupervisorDashboardPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SupervisorDashboardPage(),
+                        ),
                       );
                     },
                   ),
@@ -102,7 +101,9 @@ class SupervisorLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const SupervisorLaboursPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SupervisorLaboursPage(),
+                        ),
                       );
                     },
                   ),
@@ -113,7 +114,9 @@ class SupervisorLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const SupervisorPaymentsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SupervisorPaymentsPage(),
+                        ),
                       );
                     },
                   ),
@@ -124,7 +127,9 @@ class SupervisorLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const SupervisorTransactionsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SupervisorTransactionsPage(),
+                        ),
                       );
                     },
                   ),
@@ -136,7 +141,9 @@ class SupervisorLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const SupervisorProfilePage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SupervisorProfilePage(),
+                        ),
                       );
                     },
                   ),
@@ -144,7 +151,26 @@ class SupervisorLayout extends StatelessWidget {
                     context,
                     icon: Icons.logout,
                     title: 'Logout',
-                    onTap: () {},
+                    onTap: () async {
+                      try {
+                        // 1️⃣ Close drawer first (important on mobile)
+                        Navigator.pop(context);
+
+                        // 2️⃣ Sign out from Supabase
+                        await Supabase.instance.client.auth.signOut();
+
+                        // 3️⃣ Clear navigation stack and go to login
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/login', // replace with your actual login route if different
+                          (route) => false,
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Logout failed: $e')),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -152,10 +178,7 @@ class SupervisorLayout extends StatelessWidget {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 
@@ -171,9 +194,7 @@ class SupervisorLayout extends StatelessWidget {
         leading: Icon(icon),
         title: Text(title),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
       ),
     );

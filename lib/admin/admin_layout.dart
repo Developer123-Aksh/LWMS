@@ -6,7 +6,8 @@ import 'admin_home.dart';
 import 'admin_transection_page.dart';
 import '../theme_provider.dart';
 import 'package:provider/provider.dart';
-
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../auth/login_page.dart';
 class AdminLayout extends StatelessWidget {
   final String title;
   final Widget child;
@@ -138,13 +139,25 @@ class AdminLayout extends StatelessWidget {
                     },
                   ),
                   _buildDrawerItem(
-                    context,
-                    icon: Icons.logout,
-                    title: 'Logout',
-                    onTap: () {
-                      // Handle logout
-                    },
-                  ),
+  context,
+  icon: Icons.logout,
+  title: 'Logout',
+  onTap: () async {
+    // Close drawer first (important)
+    Navigator.pop(context);
+
+    // Sign out from Supabase
+    await Supabase.instance.client.auth.signOut();
+
+    // Navigate to login & clear navigation stack
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginUIPage()),
+      (route) => false,
+    );
+  },
+),
+
                 ],
               ),
             ),

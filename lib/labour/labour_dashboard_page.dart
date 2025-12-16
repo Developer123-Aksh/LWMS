@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'labour_home.dart';
 import 'labour_payments_page.dart';
 import 'labour_profile_page.dart';
-import '../theme_provider.dart';
-import 'package:provider/provider.dart';
+// import '../theme_provider.dart';
+// import 'package:provider/provider.dart';
 
 class LabourHome extends StatefulWidget {
   const LabourHome({super.key});
@@ -23,7 +23,7 @@ class _LabourHomeState extends State<LabourHome> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Scaffold(

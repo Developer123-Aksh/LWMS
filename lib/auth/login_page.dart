@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
-import 'register_org_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../app_routes.dart';
 
 class LoginUIPage extends StatelessWidget {
   const LoginUIPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FA),
       body: Center(
@@ -24,8 +28,6 @@ class LoginUIPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const SizedBox(height: 12),
-
-                    // App / System Title
                     const Text(
                       'Labour Management System',
                       textAlign: TextAlign.center,
@@ -34,19 +36,16 @@ class LoginUIPage extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-
                     const SizedBox(height: 6),
-
                     const Text(
                       'Login to continue',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.grey),
                     ),
-
                     const SizedBox(height: 32),
 
-                    // Email
                     TextField(
+                      controller: emailController,
                       decoration: InputDecoration(
                         labelText: 'Email',
                         prefixIcon: const Icon(Icons.email_outlined),
@@ -55,11 +54,10 @@ class LoginUIPage extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
 
-                    // Password
                     TextField(
+                      controller: passwordController,
                       obscureText: true,
                       decoration: InputDecoration(
                         labelText: 'Password',
@@ -69,19 +67,18 @@ class LoginUIPage extends StatelessWidget {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
 
-                    // Login Button
                     SizedBox(
                       height: 48,
                       child: ElevatedButton(
-                        onPressed: () {},
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
+                        onPressed: () async {
+                          await Supabase.instance.client.auth
+                              .signInWithPassword(
+                            email: emailController.text.trim(),
+                            password: passwordController.text,
+                          );
+                        },
                         child: const Text(
                           'Login',
                           style: TextStyle(fontSize: 16),
@@ -90,24 +87,16 @@ class LoginUIPage extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 12),
-
-                    // Register Organisation
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const RegisterOrganisationUIPage(),
-                          ),
-                        );
+                        Navigator.pushNamed(
+                            context, AppRoutes.registerOrg);
                       },
                       child: const Text(
                         'Register Organisation',
                         style: TextStyle(fontSize: 14),
                       ),
                     ),
-
-                    const SizedBox(height: 8),
                   ],
                 ),
               ),

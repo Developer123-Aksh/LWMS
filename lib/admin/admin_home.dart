@@ -64,7 +64,7 @@ class AdminDashboardPage extends StatelessWidget {
   }
 
   Widget _buildWelcomeCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Card(
       elevation: 0,

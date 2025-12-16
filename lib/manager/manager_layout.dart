@@ -6,6 +6,7 @@ import 'manager_transactions_page.dart';
 import 'manager_profile_page.dart';
 import '../theme_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ManagerLayout extends StatelessWidget {
   final String title;
@@ -17,7 +18,7 @@ class ManagerLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       appBar: AppBar(
         title: Text(title),
@@ -87,7 +88,9 @@ class ManagerLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManagerDashboardPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManagerDashboardPage(),
+                        ),
                       );
                     },
                   ),
@@ -98,7 +101,9 @@ class ManagerLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManagerLaboursPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManagerLaboursPage(),
+                        ),
                       );
                     },
                   ),
@@ -109,7 +114,9 @@ class ManagerLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManagerPaymentsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManagerPaymentsPage(),
+                        ),
                       );
                     },
                   ),
@@ -120,7 +127,9 @@ class ManagerLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManagerTransactionsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManagerTransactionsPage(),
+                        ),
                       );
                     },
                   ),
@@ -132,7 +141,9 @@ class ManagerLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ManagerProfilePage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ManagerProfilePage(),
+                        ),
                       );
                     },
                   ),
@@ -140,7 +151,26 @@ class ManagerLayout extends StatelessWidget {
                     context,
                     icon: Icons.logout,
                     title: 'Logout',
-                    onTap: () {},
+                    onTap: () async {
+                      try {
+                        // 1️⃣ Close drawer first (important on mobile)
+                        Navigator.pop(context);
+
+                        // 2️⃣ Sign out from Supabase
+                        await Supabase.instance.client.auth.signOut();
+
+                        // 3️⃣ Clear navigation stack and go to login
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          '/login', // replace with your actual login route if different
+                          (route) => false,
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Logout failed: $e')),
+                        );
+                      }
+                    },
                   ),
                 ],
               ),
@@ -148,10 +178,7 @@ class ManagerLayout extends StatelessWidget {
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 
@@ -167,9 +194,7 @@ class ManagerLayout extends StatelessWidget {
         leading: Icon(icon),
         title: Text(title),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
       ),
     );

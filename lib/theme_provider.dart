@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 // Theme Provider for managing dark/light mode
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
+  UserRole? _role;
   
   ThemeMode get themeMode => _themeMode;
+  UserRole? get role => _role;
+
   
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
@@ -15,10 +18,19 @@ class ThemeProvider extends ChangeNotifier {
     _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
     notifyListeners();
   }
+  void setRole(UserRole role) {
+    if (_role == role) return;
+    _role = role;
+    notifyListeners();
+  }
+  void clearRole() {
+    _role = null;
+    notifyListeners();
+  }
 }
 
 // Role-based color schemes
-enum UserRole { admin, manager, supervisor, labour }
+enum UserRole { admin, manager, supervisor, labour,guest }
 
 class RoleColors {
   static const Map<UserRole, Color> primaryColors = {
@@ -26,6 +38,7 @@ class RoleColors {
     UserRole.manager: Color(0xFF7B1FA2), // Purple
     UserRole.supervisor: Color(0xFF388E3C), // Green
     UserRole.labour: Color(0xFFE64A19), // Orange
+    UserRole.guest: Color(0xFF607D8B), // Blue Grey
   };
   
   static const Map<UserRole, Color> darkPrimaryColors = {
@@ -33,6 +46,7 @@ class RoleColors {
     UserRole.manager: Color(0xFFAB47BC), // Light Purple
     UserRole.supervisor: Color(0xFF66BB6A), // Light Green
     UserRole.labour: Color(0xFFFF7043), // Light Orange
+    UserRole.guest: Color(0xFF90A4AE), // Light Blue Grey
   };
   
   static Color getPrimaryColor(UserRole role, bool isDark) {
