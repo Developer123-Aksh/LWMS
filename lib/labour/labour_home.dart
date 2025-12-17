@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'labour_layout.dart';
+import '../services/profile_service.dart';
 
 class LabourDashboardPage extends StatelessWidget {
   const LabourDashboardPage({super.key});
@@ -8,53 +9,58 @@ class LabourDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LabourLayout(
       title: 'Dashboard',
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Card
-            _buildWelcomeCard(context),
-            const SizedBox(height: 24),
+      child: FutureBuilder<Map<String, dynamic>>(
+        future: LabourService.fetchDashboard(),
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            // Financial Summary Cards
-            const _InfoCard(
-              title: 'Total Salary',
-              value: '₹ 18,000',
-              subtitle: 'This Month',
-              icon: Icons.account_balance_wallet,
-              color: Color(0xFF1976D2),
-            ),
-            const SizedBox(height: 12),
-            const _InfoCard(
-              title: 'Advance Taken',
-              value: '₹ 4,500',
-              subtitle: '3 advances',
-              icon: Icons.payments,
-              color: Color(0xFFE64A19),
-            ),
-            const SizedBox(height: 12),
-            const _InfoCard(
-              title: 'Balance Due',
-              value: '₹ 13,500',
-              subtitle: 'To be received',
-              icon: Icons.savings,
-              color: Color(0xFF388E3C),
-            ),
-            const SizedBox(height: 24),
+          final d = snap.data!;
 
-            // Attendance Summary
-            _buildAttendanceSummary(context),
-            const SizedBox(height: 24),
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildWelcomeCard(context, d),
+                const SizedBox(height: 24),
 
-            // Recent Activity
-            _buildRecentActivity(context),
-          ],
-        ),
+                _InfoCard(
+                  title: 'Monthly Salary',
+                  value: '₹ ${d['salary']}',
+                  subtitle: 'This month',
+                  icon: Icons.account_balance_wallet,
+                  color: const Color(0xFF1976D2),
+                ),
+                const SizedBox(height: 12),
+
+                _InfoCard(
+                  title: 'Advance Taken',
+                  value: '₹ ${d['total_advance']}',
+                  subtitle: 'This month',
+                  icon: Icons.payments,
+                  color: const Color(0xFFE64A19),
+                ),
+                const SizedBox(height: 12),
+
+                _InfoCard(
+                  title: 'Balance Due',
+                  value: '₹ ${d['balance_due']}',
+                  subtitle: 'To be received',
+                  icon: Icons.savings,
+                  color: const Color(0xFF388E3C),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildWelcomeCard(BuildContext context) {
+  // ================= WELCOME CARD =================
+
+  Widget _buildWelcomeCard(BuildContext context, Map<String, dynamic> d) {
     final hour = DateTime.now().hour;
     String greeting = 'Good Morning';
     if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
@@ -66,13 +72,15 @@ class LabourDashboardPage extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withOpacity(0.2),
                   child: Icon(
                     Icons.person,
                     size: 32,
@@ -86,17 +94,20 @@ class LabourDashboardPage extends StatelessWidget {
                     children: [
                       Text(
                         '$greeting!',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            ),
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Ramesh Kumar',
+                        d['name'],
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.8),
                           fontSize: 16,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer
+                              .withOpacity(0.8),
                         ),
                       ),
                     ],
@@ -110,9 +121,8 @@ class LabourDashboardPage extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildInfoItem(context, Icons.location_city, 'Site A'),
-                _buildInfoItem(context, Icons.badge, 'Team B'),
-                _buildInfoItem(context, Icons.supervisor_account, 'Under Ramesh'),
+                _info(Icons.location_city, d['venue_name'], context),
+                _info(Icons.supervisor_account, d['supervisor_name'], context),
               ],
             ),
           ],
@@ -121,234 +131,26 @@ class LabourDashboardPage extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoItem(BuildContext context, IconData icon, String text) {
+  Widget _info(IconData icon, String text, BuildContext context) {
     return Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-        ),
+        Icon(icon,
+            size: 16,
+            color: Theme.of(context).colorScheme.onPrimaryContainer),
         const SizedBox(width: 6),
         Text(
           text,
           style: TextStyle(
+            fontSize: 12,
             color: Theme.of(context).colorScheme.onPrimaryContainer,
-            fontSize: 12,
           ),
         ),
       ],
     );
-  }
-
-  Widget _buildAttendanceSummary(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'This Month Attendance',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildAttendanceItem(
-                        context,
-                        icon: Icons.check_circle,
-                        label: 'Present',
-                        value: '22 days',
-                        color: Colors.green,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 60,
-                      color: Colors.grey[300],
-                    ),
-                    Expanded(
-                      child: _buildAttendanceItem(
-                        context,
-                        icon: Icons.cancel,
-                        label: 'Absent',
-                        value: '1 day',
-                        color: Colors.red,
-                      ),
-                    ),
-                    Container(
-                      width: 1,
-                      height: 60,
-                      color: Colors.grey[300],
-                    ),
-                    Expanded(
-                      child: _buildAttendanceItem(
-                        context,
-                        icon: Icons.event_busy,
-                        label: 'Leave',
-                        value: '0 days',
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Divider(),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Attendance Rate',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      '95.6%',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAttendanceItem(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 32),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Theme.of(context).textTheme.bodySmall?.color,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRecentActivity(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Recent Activity',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-        ),
-        const SizedBox(height: 16),
-        Card(
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: 5,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, index) {
-              return ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: _getActivityColor(index).withOpacity(0.1),
-                  child: Icon(
-                    _getActivityIcon(index),
-                    color: _getActivityColor(index),
-                  ),
-                ),
-                title: Text(_getActivityTitle(index)),
-                subtitle: Text(_getActivitySubtitle(index)),
-                trailing: Text(
-                  _getActivityTime(index),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  IconData _getActivityIcon(int index) {
-    final icons = [
-      Icons.check_circle,
-      Icons.payments,
-      Icons.check_circle,
-      Icons.payments,
-      Icons.cancel,
-    ];
-    return icons[index];
-  }
-
-  Color _getActivityColor(int index) {
-    final colors = [
-      Colors.green,
-      Colors.blue,
-      Colors.green,
-      Colors.orange,
-      Colors.red,
-    ];
-    return colors[index];
-  }
-
-  String _getActivityTitle(int index) {
-    final titles = [
-      'Attendance Marked',
-      'Advance Received',
-      'Attendance Marked',
-      'Payment Received',
-      'Absent Marked',
-    ];
-    return titles[index];
-  }
-
-  String _getActivitySubtitle(int index) {
-    final subtitles = [
-      'Present - Full day',
-      '₹1,500 advance payment',
-      'Present - Full day',
-      '₹600 daily wage',
-      'Absent due to illness',
-    ];
-    return subtitles[index];
-  }
-
-  String _getActivityTime(int index) {
-    final times = ['Today', 'Yesterday', '2 days ago', '3 days ago', '5 days ago'];
-    return times[index];
   }
 }
+
+// ================= INFO CARD =================
 
 class _InfoCard extends StatelessWidget {
   final String title;
@@ -367,16 +169,10 @@ class _InfoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-          width: 1,
-        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -395,26 +191,16 @@ class _InfoCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    value,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
+                  Text(value,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text(
-                    title,
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+                  Text(title),
                   const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: color,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(subtitle,
+                      style: TextStyle(fontSize: 12, color: color)),
                 ],
               ),
             ),

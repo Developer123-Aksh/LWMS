@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'labour_layout.dart';
 import '../services/profile_service.dart';
+import '../auth/login_page.dart'; // 🔴 CHANGE if your login widget name differs
 
 class LabourProfilePage extends StatefulWidget {
   const LabourProfilePage({super.key});
@@ -25,21 +27,8 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
       child: FutureBuilder<Map<String, dynamic>>(
         future: _profileFuture,
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                snapshot.error.toString(),
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
           if (!snapshot.hasData) {
-            return const Center(child: Text('No profile data found'));
+            return const Center(child: CircularProgressIndicator());
           }
 
           final data = snapshot.data!;
@@ -57,6 +46,7 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
               : '-';
 
           return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 // ================= HEADER =================
@@ -64,7 +54,7 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                   elevation: 0,
                   color: Theme.of(context).colorScheme.primaryContainer,
                   child: Padding(
-                    padding: const EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
                         CircleAvatar(
@@ -75,7 +65,7 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                               .withOpacity(0.2),
                           child: Icon(
                             Icons.person,
-                            size: 50,
+                            size: 48,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
@@ -88,45 +78,21 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            role,
-                            style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                        _pill(
+                          role,
+                          Theme.of(context).colorScheme.primary,
                         ),
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: status == 'ACTIVE'
-                                ? Colors.green.withOpacity(0.15)
-                                : Colors.red.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            status,
-                            style: TextStyle(
-                              color: status == 'ACTIVE'
-                                  ? Colors.green
-                                  : Colors.red,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 12,
-                            ),
-                          ),
+                        _pill(
+                          status,
+                          status == 'ACTIVE' ? Colors.green : Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: () =>
+                              _showEditProfileDialog(context, data),
+                          icon: const Icon(Icons.edit),
+                          label: const Text('Edit Profile'),
                         ),
                       ],
                     ),
@@ -136,7 +102,8 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                 const SizedBox(height: 24),
 
                 // ================= WORK INFO =================
-                _section(context, 'Work Information', [
+                _section('Work Information', [
+                  _row(Icons.business, 'Organisation', orgName),
                   _row(
                     Icons.location_city,
                     'Assigned Site',
@@ -150,8 +117,7 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                 const SizedBox(height: 16),
 
                 // ================= PERSONAL INFO =================
-                _section(context, 'Personal Information', [
-                  _row(Icons.business, 'Organisation', orgName),
+                _section('Personal Information', [
                   _row(Icons.phone, 'Mobile', mobile),
                   _row(Icons.credit_card, 'Aadhaar Number', aadhar),
                 ]),
@@ -159,16 +125,23 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
                 const SizedBox(height: 16),
 
                 // ================= SETTINGS =================
-                _section(context, 'Settings', [
+                _section('Settings', [
                   ListTile(
-                    leading: Icon(
-                      Icons.security,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    leading: Icon(Icons.security,
+                        color: Theme.of(context).colorScheme.primary),
                     title: const Text('Change Password'),
                     trailing:
                         const Icon(Icons.arrow_forward_ios, size: 16),
-                    onTap: () {},
+                    onTap: () => _showChangePasswordDialog(context),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () => _confirmLogout(context),
                   ),
                 ]),
               ],
@@ -179,10 +152,159 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
     );
   }
 
-  // ================= HELPERS =================
+  // ================= EDIT PROFILE =================
 
-  Widget _section(
-      BuildContext context, String title, List<Widget> children) {
+  void _showEditProfileDialog(
+    BuildContext context,
+    Map<String, dynamic> data,
+  ) {
+    final nameCtrl = TextEditingController(text: data['name'] ?? '');
+    final mobileCtrl =
+        TextEditingController(text: data['mobile_no'] ?? '');
+    final aadharCtrl =
+        TextEditingController(text: data['aadhar_no']?.toString() ?? '');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: mobileCtrl,
+                decoration: const InputDecoration(labelText: 'Mobile'),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: aadharCtrl,
+                decoration: const InputDecoration(labelText: 'Aadhaar Number'),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            child: const Text('Save'),
+            onPressed: () async {
+              await LabourService.updateProfile(
+                name: nameCtrl.text.trim(),
+                mobile: mobileCtrl.text.trim(),
+                aadhar: aadharCtrl.text.trim(),
+              );
+
+              if (mounted) {
+                setState(() {
+                  _profileFuture = LabourService.fetchProfile();
+                });
+                Navigator.pop(context);
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= PASSWORD =================
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final p1 = TextEditingController();
+    final p2 = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Change Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: p1,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'New Password'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: p2,
+              obscureText: true,
+              decoration:
+                  const InputDecoration(labelText: 'Confirm Password'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            child: const Text('Update'),
+            onPressed: () async {
+              if (p1.text != p2.text) return;
+
+              await Supabase.instance.client.auth.updateUser(
+                UserAttributes(password: p1.text),
+              );
+
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= LOGOUT =================
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              Navigator.pop(context);
+              await Supabase.instance.client.auth.signOut();
+
+              if (!mounted) return;
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const LoginUIPage(),
+                ),
+                (route) => false,
+              );
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= UI HELPERS =================
+
+  Widget _section(String title, List<Widget> children) {
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,10 +313,10 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
             padding: const EdgeInsets.all(16),
             child: Text(
               title,
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
+              style:
+                  Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
             ),
           ),
           const Divider(height: 1),
@@ -215,20 +337,14 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 12, color: Colors.grey)),
                 const SizedBox(height: 4),
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -238,9 +354,21 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/'
-        '${date.month.toString().padLeft(2, '0')}/'
-        '${date.year}';
+  Widget _pill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontWeight: FontWeight.w600),
+      ),
+    );
   }
+
+  String _formatDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/'
+      '${d.month.toString().padLeft(2, '0')}/${d.year}';
 }

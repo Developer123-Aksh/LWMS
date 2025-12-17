@@ -10,7 +10,6 @@ class AdminUsersPage extends StatefulWidget {
 }
 
 class _AdminUsersPageState extends State<AdminUsersPage> {
-    Map<String, String> _venueIdNameMap = {};
   String _selectedRole = 'ALL';
   late Future<List<Map<String, dynamic>>> _usersFuture;
 
@@ -18,48 +17,45 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   void initState() {
     super.initState();
     _usersFuture = _fetchUsers();
-    _initVenueIdNameMap();
   }
-
-  Future<void> _initVenueIdNameMap() async {
-    final venues = await _fetchVenues();
-    setState(() {
-      _venueIdNameMap = {
-        for (var v in venues)
-          if (v['id'] != null && v['name'] != null) v['id'].toString(): v['name'].toString(),
-      };
-    });
-  }
-
-  // ================= FETCH USERS =================
 
   Future<List<Map<String, dynamic>>> _fetchUsers() async {
     final client = Supabase.instance.client;
-    final currentUser = client.auth.currentUser;
-    if (currentUser == null) {
-      debugPrint('No current user found');
-      return [];
-    }
+    final uid = client.auth.currentUser!.id;
 
     final admin = await client
         .from('users')
         .select('organisation_id')
-        .eq('id', currentUser.id)
+        .eq('id', uid)
         .single();
-    debugPrint('Fetched admin: ${admin}');
 
-    dynamic query = client
+    var q = client
         .from('users')
-        .select('id, name, mobile_no, role, status, venue_id')
+        .select('id,name,mobile_no,role,status')
         .eq('organisation_id', admin['organisation_id']);
 
     if (_selectedRole != 'ALL') {
-      query = query.eq('role', _selectedRole);
+      q = q.eq('role', _selectedRole);
     }
 
-    final users = await query.order('created_at', ascending: false);
-    debugPrint('Fetched users: ${users}');
-    return users;
+    return await q.order('created_at', ascending: false);
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchVenues() async {
+    final client = Supabase.instance.client;
+    final uid = client.auth.currentUser!.id;
+
+    final admin = await client
+        .from('users')
+        .select('organisation_id')
+        .eq('id', uid)
+        .single();
+
+    return await client
+        .from('venues')
+        .select('id,name')
+        .eq('organisation_id', admin['organisation_id'])
+        .order('name');
   }
 
   void _refresh() {
@@ -68,133 +64,101 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     });
   }
 
-  // ================= FETCH VENUES =================
-
-  Future<List<Map<String, dynamic>>> _fetchVenues() async {
-    final client = Supabase.instance.client;
-    final currentUser = client.auth.currentUser;
-    if (currentUser == null) {
-      debugPrint('No current user found (venues)');
-      return [];
-    }
-
-    final admin = await client
-      .from('users')
-      .select('organisation_id')
-      .eq('id', currentUser.id)
-      .single();
-    debugPrint('Fetched admin for venues: ${admin}');
-
-    final venues = await client
-      .from('venues')
-      .select('id, name')
-      .eq('organisation_id', admin['organisation_id']);
-    debugPrint('Fetched venues: ${venues}');
-    return venues;
-  }
-
-  // ================= UI =================
-
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
       title: 'Users',
-      child: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _usersFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                snapshot.error.toString(),
-                style: const TextStyle(color: Colors.red),
-              ),
-            );
-          }
-
-          final users = snapshot.data ?? [];
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        children: [
+          Row(
             children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () => _showAddUserDialog(context),
-                    icon: const Icon(Icons.person_add),
-                    label: const Text('Add User'),
-                  ),
-                  DropdownButton<String>(
-                    value: _selectedRole,
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'ALL', child: Text('All Roles')),
-                      DropdownMenuItem(value: 'MANAGER', child: Text('Manager')),
-                      DropdownMenuItem(value: 'SUPERVISOR', child: Text('Supervisor')),
-                      DropdownMenuItem(value: 'LABOUR', child: Text('Labour')),
-                    ],
-                    onChanged: (v) {
-                      setState(() => _selectedRole = v!);
-                      _refresh();
-                    },
-                  ),
+              DropdownButton<String>(
+                value: _selectedRole,
+                items: const [
+                  DropdownMenuItem(value: 'ALL', child: Text('All')),
+                  DropdownMenuItem(value: 'MANAGER', child: Text('Manager')),
+                  DropdownMenuItem(value: 'SUPERVISOR', child: Text('Supervisor')),
+                  DropdownMenuItem(value: 'LABOUR', child: Text('Labour')),
                 ],
+                onChanged: (v) {
+                  _selectedRole = v!;
+                  _refresh();
+                },
               ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: users.isEmpty
-                    ? const Center(child: Text('No users found'))
-                    : ListView.builder(
-                        itemCount: users.length,
-                        itemBuilder: (_, index) {
-                          final u = users[index];
-                          String siteName = 'Not Assigned';
-                          if (u['venue_id'] != null && _venueIdNameMap.isNotEmpty) {
-                            siteName = _venueIdNameMap[u['venue_id'].toString()] ?? 'Unknown';
-                          }
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                child: Text(
-                                  (u['name'] ?? '?').toString().isNotEmpty
-                                      ? u['name'][0]
-                                      : '?',
-                                ),
-                              ),
-                              title: Text(
-                                u['name'] ?? '-',
-                                style: const TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Role: ${u['role']}'),
-                                  Text('Site: $siteName'),
-                                  Text('Mobile: ${u['mobile_no'] ?? '-'}'),
-                                  Text('Status: ${u['status']}'),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: _showAddUserDialog,
+                icon: const Icon(Icons.person_add),
+                label: const Text('Add User'),
               ),
             ],
-          );
-        },
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _usersFuture,
+              builder: (_, s) {
+                if (s.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (s.hasError) {
+                  return Center(child: Text(s.error.toString()));
+                }
+
+                final users = s.data!;
+                if (users.isEmpty) {
+                  return const Center(child: Text('No users found'));
+                }
+
+                return ListView.builder(
+                  itemCount: users.length,
+                  itemBuilder: (_, i) {
+                    final u = users[i];
+                    final role = u['role'];
+
+                    return Card(
+                      child: ListTile(
+                        title: Text(u['name']),
+                        subtitle: Text('$role • ${u['mobile_no']}'),
+                        trailing: role == 'ADMIN'
+                            ? null
+                            : PopupMenuButton<String>(
+                                onSelected: (v) {
+                                  if (v == 'reset') {
+                                    _showResetDialog(
+                                      userId: u['id'],
+                                      userName: u['name'],
+                                    );
+                                  }
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'reset',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.lock_reset, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Reset Password'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ================= ADD USER DIALOG =================
+  // ================= ADD USER =================
 
-  void _showAddUserDialog(BuildContext context) {
+  void _showAddUserDialog() {
     final nameCtrl = TextEditingController();
     final emailCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
@@ -206,45 +170,42 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Add New User'),
-        content: FutureBuilder<List<Map<String, dynamic>>>(
-          future: _fetchVenues(),
-          builder: (_, snapshot) {
-            final venues = snapshot.data ?? [];
-
-            return SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Full Name')),
-                  const SizedBox(height: 12),
-                  TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-                  const SizedBox(height: 12),
-                  TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile')),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: passwordCtrl,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: role,
-                    decoration: const InputDecoration(labelText: 'Role'),
-                    items: const [
-                      DropdownMenuItem(value: 'MANAGER', child: Text('Manager')),
-                      DropdownMenuItem(value: 'SUPERVISOR', child: Text('Supervisor')),
-                      DropdownMenuItem(value: 'LABOUR', child: Text('Labour')),
-                    ],
-                    onChanged: (v) => role = v!,
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String?>(
+        title: const Text('Add User'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
+              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
+              TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile')),
+              TextField(
+                controller: passwordCtrl,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
+              DropdownButtonFormField<String>(
+                value: role,
+                decoration: const InputDecoration(labelText: 'Role'),
+                items: const [
+                  DropdownMenuItem(value: 'MANAGER', child: Text('Manager')),
+                  DropdownMenuItem(value: 'SUPERVISOR', child: Text('Supervisor')),
+                  DropdownMenuItem(value: 'LABOUR', child: Text('Labour')),
+                ],
+                onChanged: (v) => role = v!,
+              ),
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _fetchVenues(),
+                builder: (_, s) {
+                  if (!s.hasData) return const SizedBox();
+                  return DropdownButtonFormField<String?>(
                     value: venueId,
-                    decoration: const InputDecoration(labelText: 'Site (Optional)'),
+                    decoration: const InputDecoration(labelText: 'Assign Site'),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('Not Assigned')),
-                      ...venues.map(
+                      const DropdownMenuItem(
+                        value: null,
+                        child: Text('Not Assigned'),
+                      ),
+                      ...s.data!.map(
                         (v) => DropdownMenuItem(
                           value: v['id'],
                           child: Text(v['name']),
@@ -252,18 +213,16 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       ),
                     ],
                     onChanged: (v) => venueId = v,
-                  ),
-                ],
+                  );
+                },
               ),
-            );
-          },
+            ],
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
+            child: const Text('Create'),
             onPressed: () async {
               Navigator.pop(context);
 
@@ -276,58 +235,77 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   )
                   .single();
 
-              await _createUserByAdmin(
-                name: nameCtrl.text.trim(),
-                email: emailCtrl.text.trim(),
-                mobile: mobileCtrl.text.trim(),
-                password: passwordCtrl.text,
-                role: role,
-                organisationId: admin['organisation_id'],
-                venueId: venueId,
+              final res = await Supabase.instance.client.functions.invoke(
+                'create-user',
+                body: {
+                  'name': nameCtrl.text.trim(),
+                  'email': emailCtrl.text.trim(),
+                  'password': passwordCtrl.text,
+                  'mobile_no': mobileCtrl.text.trim(),
+                  'role': role,
+                  'organisation_id': admin['organisation_id'],
+                  'venue_id': venueId,
+                },
               );
+
+              if (res.status != 200) {
+                throw Exception(res.data);
+              }
 
               _refresh();
             },
-            child: const Text('Create User'),
           ),
         ],
       ),
     );
   }
 
-  // ================= EDGE FUNCTION CALL =================
+  // ================= RESET PASSWORD =================
 
-  Future<void> _createUserByAdmin({
-    required String name,
-    required String email,
-    required String password,
-    required String mobile,
-    required String role,
-    required String organisationId,
-    String? venueId,
-  }) async {
-    final client = Supabase.instance.client;
+  void _showResetDialog({
+    required String userId,
+    required String userName,
+  }) {
+    final ctrl = TextEditingController();
 
-    debugPrint('Creating user with: name=$name, email=$email, mobile=$mobile, role=$role, organisationId=$organisationId, venueId=$venueId');
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Reset Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('User: $userName'),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'New Password'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            child: const Text('Reset'),
+            onPressed: () async {
+              Navigator.pop(context);
 
-    final res = await client.functions.invoke(
-      'create-user',
-      body: {
-        'name': name,
-        'email': email,
-        'password': password,
-        'mobile_no': mobile,
-        'role': role,
-        'organisation_id': organisationId,
-        'venue_id': venueId,
-      },
+              final res = await Supabase.instance.client.functions.invoke(
+                'reset-user-password',
+                body: {
+                  'user_id': userId,
+                  'password': ctrl.text.trim(),
+                },
+              );
+
+              if (res.status != 200) {
+                throw Exception(res.data);
+              }
+            },
+          ),
+        ],
+      ),
     );
-
-    debugPrint('Create user response: status=${res.status}, data=${res.data}');
-
-    if (res.status != 200) {
-      debugPrint('Error creating user: ${res.data}');
-      throw Exception(res.data);
-    }
   }
 }

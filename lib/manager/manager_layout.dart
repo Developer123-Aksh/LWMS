@@ -97,12 +97,12 @@ class ManagerLayout extends StatelessWidget {
                   _buildDrawerItem(
                     context,
                     icon: Icons.groups,
-                    title: 'Labours',
+                    title: 'Team Members',
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ManagerLaboursPage(),
+                          builder: (_) => const ManagerTeamPage(),
                         ),
                       );
                     },

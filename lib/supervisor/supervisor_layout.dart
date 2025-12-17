@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'supervisor_dashboard_page.dart';
 import 'supervisor_profile_page.dart';
 import 'supervisor_labours_page.dart';
-import 'supervisor_payments_page.dart';
 import 'supervisor_transactions_page.dart';
 import '../theme_provider.dart';
 import 'package:provider/provider.dart';
@@ -97,7 +96,7 @@ class SupervisorLayout extends StatelessWidget {
                   _buildDrawerItem(
                     context,
                     icon: Icons.groups,
-                    title: 'Labours',
+                    title: 'Team Members',
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
@@ -107,19 +106,7 @@ class SupervisorLayout extends StatelessWidget {
                       );
                     },
                   ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.payments,
-                    title: 'Payments',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SupervisorPaymentsPage(),
-                        ),
-                      );
-                    },
-                  ),
+                 
                   _buildDrawerItem(
                     context,
                     icon: Icons.receipt,

@@ -10,7 +10,7 @@ import 'app_routes.dart';
 import 'admin/admin_home.dart';
 import 'manager/manager_dashboard_page.dart';
 import 'supervisor/supervisor_dashboard_page.dart';
-import 'labour/labour_dashboard_page.dart';
+import 'labour/labour_home.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
               AppRoutes.supervisorHome: (_) =>
                   const SupervisorDashboardPage(),
               AppRoutes.labourHome: (_) =>
-                  const LabourHome(),
+                  const LabourDashboardPage(),
             },
           );
         },

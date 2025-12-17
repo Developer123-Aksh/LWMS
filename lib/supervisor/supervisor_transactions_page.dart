@@ -1,234 +1,159 @@
 import 'package:flutter/material.dart';
+import '../services/profile_service.dart';
 import 'supervisor_layout.dart';
 
 class SupervisorTransactionsPage extends StatefulWidget {
   const SupervisorTransactionsPage({super.key});
 
   @override
-  State<SupervisorTransactionsPage> createState() => _SupervisorTransactionsPageState();
+  State<SupervisorTransactionsPage> createState() =>
+      _SupervisorTransactionsPageState();
 }
 
-class _SupervisorTransactionsPageState extends State<SupervisorTransactionsPage> {
-  String _selectedFilter = 'All';
+class _SupervisorTransactionsPageState
+    extends State<SupervisorTransactionsPage> {
+  String _typeFilter = 'All';
   DateTimeRange? _dateRange;
+
+  late Future<List<Map<String, dynamic>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+  }
+
+  void _reload() {
+    _future = SupervisorService.fetchTransactions();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SupervisorLayout(
       title: 'Transactions',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text(snapshot.error.toString()));
+          }
+
+          final all = snapshot.data!;
+          final filtered = _applyFilters(all);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _summaryRow(all),
+              const SizedBox(height: 24),
+              _filters(context),
+              const SizedBox(height: 16),
+              Expanded(child: _transactionsList(filtered)),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // ================= SUMMARY =================
+
+  Widget _summaryRow(List<Map<String, dynamic>> data) {
+    final total = data.fold<num>(
+      0,
+      (sum, e) => sum + (e['amount'] ?? 0),
+    );
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
         children: [
-          // Summary Cards
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildSummaryCard(
-                  context,
-                  title: 'Total Paid',
-                  value: '₹ 1,28,000',
-                  subtitle: 'This Month',
-                  icon: Icons.payments,
-                  color: Colors.green,
-                ),
-                const SizedBox(width: 12),
-                _buildSummaryCard(
-                  context,
-                  title: 'Transactions',
-                  value: '142',
-                  subtitle: 'This Month',
-                  icon: Icons.receipt_long,
-                  color: Colors.blue,
-                ),
-                const SizedBox(width: 12),
-                _buildSummaryCard(
-                  context,
-                  title: 'Today',
-                  value: '₹ 9,500',
-                  subtitle: '8 payments',
-                  icon: Icons.today,
-                  color: Colors.orange,
-                ),
-              ],
-            ),
+          _summaryCard(
+            'Total Paid',
+            '₹ ${total.toStringAsFixed(0)}',
+            Icons.payments,
+            Colors.green,
           ),
-          const SizedBox(height: 24),
-
-          // Filters
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  // Date Range
-                  SizedBox(
-                    width: 200,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _selectDateRange(context),
-                      icon: const Icon(Icons.date_range),
-                      label: Text(
-                        _dateRange == null
-                            ? 'Select Date Range'
-                            : '${_dateRange!.start.day}/${_dateRange!.start.month} - ${_dateRange!.end.day}/${_dateRange!.end.month}',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                  ),
-
-                  // Type Filter
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceVariant,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: DropdownButton<String>(
-                      value: _selectedFilter,
-                      underline: const SizedBox(),
-                      items: const [
-                        DropdownMenuItem(value: 'All', child: Text('All Types')),
-                        DropdownMenuItem(value: 'Advance', child: Text('Advance')),
-                        DropdownMenuItem(value: 'Daily Wage', child: Text('Daily Wage')),
-                        DropdownMenuItem(value: 'Emergency', child: Text('Emergency')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedFilter = value!;
-                        });
-                      },
-                    ),
-                  ),
-
-                  // Clear Filters
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        _selectedFilter = 'All';
-                        _dateRange = null;
-                      });
-                    },
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Transactions List
-          Expanded(
-            child: Card(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Payment History',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.pending,
-                                size: 16,
-                                color: Colors.orange,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '5 Pending Approvals',
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: 20,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        return _buildTransactionTile(context, index);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          const SizedBox(width: 12),
+          _summaryCard(
+            'Transactions',
+            data.length.toString(),
+            Icons.receipt_long,
+            Colors.blue,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
+  Widget _summaryCard(
+    String title,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
-      child: Container(
+      child: SizedBox(
         width: 180,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: 12),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 20, fontWeight: FontWeight.bold)),
+              Text(title),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ================= FILTERS =================
+
+  Widget _filters(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.date_range),
+              label: Text(
+                _dateRange == null
+                    ? 'Select Date'
+                    : '${_dateRange!.start.day}/${_dateRange!.start.month}'
+                      ' - ${_dateRange!.end.day}/${_dateRange!.end.month}',
               ),
-              child: Icon(icon, color: color, size: 24),
+              onPressed: () => _selectDateRange(context),
             ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            DropdownButton<String>(
+              value: _typeFilter,
+              items: const [
+                DropdownMenuItem(value: 'All', child: Text('All Types')),
+                DropdownMenuItem(value: 'ADVANCE', child: Text('Advance')),
+                DropdownMenuItem(value: 'DAILY', child: Text('Daily Wage')),
+              ],
+              onChanged: (v) => setState(() => _typeFilter = v!),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.clear),
+              label: const Text('Clear'),
+              onPressed: () {
+                setState(() {
+                  _typeFilter = 'All';
+                  _dateRange = null;
+                });
+              },
             ),
           ],
         ),
@@ -236,246 +161,66 @@ class _SupervisorTransactionsPageState extends State<SupervisorTransactionsPage>
     );
   }
 
-  Widget _buildTransactionTile(BuildContext context, int index) {
-    final transaction = _getTransaction(index);
+  // ================= LIST =================
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: transaction['color'].withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          transaction['icon'],
-          color: transaction['color'],
-          size: 24,
-        ),
+  Widget _transactionsList(List<Map<String, dynamic>> data) {
+    if (data.isEmpty) {
+      return const Center(child: Text('No transactions found'));
+    }
+
+    return Card(
+      child: ListView.separated(
+        padding: const EdgeInsets.all(8),
+        itemCount: data.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (_, i) => _transactionTile(data[i]),
       ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              transaction['labour'],
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-          Text(
-            transaction['amount'],
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ],
+    );
+  }
+
+  Widget _transactionTile(Map<String, dynamic> t) {
+    return ListTile(
+      leading: const Icon(Icons.payments),
+      title: Text(
+        t['paid_to']?['name'] ?? '-',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ),
+      trailing: Text(
+        '₹ ${t['amount']}',
+        style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              _buildTypeBadge(transaction['type']),
-              const SizedBox(width: 8),
-              _buildStatusBadge(transaction['status']),
-            ],
-          ),
-          const SizedBox(height: 4),
+          Text('Type: ${t['payment_type']}'),
+          Text('Status: ${t['status']}'),
           Text(
-            transaction['date'],
-            style: TextStyle(
-              fontSize: 12,
-              color: Theme.of(context).textTheme.bodySmall?.color,
-            ),
+            t['created_at'].toString(),
+            style: const TextStyle(fontSize: 12),
           ),
         ],
       ),
-      onTap: () => _showTransactionDetails(context, transaction),
+      onTap: () => _showDetails(context, t),
     );
   }
 
-  Widget _buildTypeBadge(String type) {
-    Color color;
-    switch (type) {
-      case 'Advance':
-        color = Colors.blue;
-        break;
-      case 'Daily Wage':
-        color = Colors.green;
-        break;
-      case 'Emergency':
-        color = Colors.orange;
-        break;
-      default:
-        color = Colors.grey;
-    }
+  // ================= DETAILS =================
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        type,
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(String status) {
-    Color color;
-    IconData icon;
-    
-    switch (status) {
-      case 'Approved':
-        color = Colors.green;
-        icon = Icons.check_circle;
-        break;
-      case 'Pending':
-        color = Colors.orange;
-        icon = Icons.pending;
-        break;
-      case 'Rejected':
-        color = Colors.red;
-        icon = Icons.cancel;
-        break;
-      default:
-        color = Colors.grey;
-        icon = Icons.help;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: color),
-          const SizedBox(width: 4),
-          Text(
-            status,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Map<String, dynamic> _getTransaction(int index) {
-    final transactions = [
-      {
-        'labour': 'Ram Kumar',
-        'amount': '₹ 1,200',
-        'type': 'Advance',
-        'status': 'Approved',
-        'date': '15 Dec 2025, 10:30 AM',
-        'icon': Icons.payments,
-        'color': Colors.blue,
-        'transactionId': 'TXN00${245 - index}',
-        'reason': 'Emergency medical',
-      },
-      {
-        'labour': 'Vijay Singh',
-        'amount': '₹ 800',
-        'type': 'Daily Wage',
-        'status': 'Approved',
-        'date': '15 Dec 2025, 9:15 AM',
-        'icon': Icons.payments,
-        'color': Colors.green,
-        'transactionId': 'TXN00${244 - index}',
-        'reason': 'Daily payment',
-      },
-      {
-        'labour': 'Suresh Patel',
-        'amount': '₹ 1,500',
-        'type': 'Emergency',
-        'status': 'Pending',
-        'date': '14 Dec 2025, 4:20 PM',
-        'icon': Icons.payments,
-        'color': Colors.orange,
-        'transactionId': 'TXN00${243 - index}',
-        'reason': 'Family emergency',
-      },
-    ];
-    return transactions[index % transactions.length];
-  }
-
-  Future<void> _selectDateRange(BuildContext context) async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2024),
-      lastDate: DateTime.now(),
-      initialDateRange: _dateRange,
-    );
-    if (picked != null) {
-      setState(() {
-        _dateRange = picked;
-      });
-    }
-  }
-
-  void _showTransactionDetails(BuildContext context, Map<String, dynamic> transaction) {
+  void _showDetails(BuildContext context, Map<String, dynamic> t) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (_) => AlertDialog(
         title: const Text('Transaction Details'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildDetailRow(Icons.receipt, 'Transaction ID', transaction['transactionId']),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.person, 'Labour', transaction['labour']),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.payments, 'Amount', transaction['amount']),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.category, 'Type', transaction['type']),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.info, size: 20),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Status',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        _buildStatusBadge(transaction['status']),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.calendar_today, 'Date & Time', transaction['date']),
-              const SizedBox(height: 16),
-              _buildDetailRow(Icons.note, 'Reason', transaction['reason']),
-            ],
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _row('Paid To', t['paid_to']?['name']),
+            _row('Amount', '₹ ${t['amount']}'),
+            _row('Type', t['payment_type']),
+            _row('Status', t['status']),
+            _row('Note', t['note'] ?? '-'),
+          ],
         ),
         actions: [
           TextButton(
@@ -487,35 +232,38 @@ class _SupervisorTransactionsPageState extends State<SupervisorTransactionsPage>
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+  Widget _row(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Text('$label: ${value ?? '-'}'),
     );
+  }
+
+  // ================= HELPERS =================
+
+  List<Map<String, dynamic>> _applyFilters(
+      List<Map<String, dynamic>> data) {
+    return data.where((e) {
+      if (_typeFilter != 'All' &&
+          e['payment_type'] != _typeFilter) return false;
+
+      if (_dateRange != null) {
+        final d = DateTime.parse(e['created_at']);
+        if (d.isBefore(_dateRange!.start) ||
+            d.isAfter(_dateRange!.end)) return false;
+      }
+      return true;
+    }).toList();
+  }
+
+  Future<void> _selectDateRange(BuildContext context) async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() => _dateRange = picked);
+    }
   }
 }

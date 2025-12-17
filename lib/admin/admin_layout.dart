@@ -8,6 +8,7 @@ import '../theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../auth/login_page.dart';
+
 class AdminLayout extends StatelessWidget {
   final String title;
   final Widget child;
@@ -18,8 +19,9 @@ class AdminLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
+      // resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(title),
         actions: [
@@ -89,7 +91,9 @@ class AdminLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminDashboardPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminDashboardPage(),
+                        ),
                       );
                     },
                   ),
@@ -100,7 +104,9 @@ class AdminLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminSitesPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminSitesPage(),
+                        ),
                       );
                     },
                   ),
@@ -111,7 +117,9 @@ class AdminLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminUsersPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminUsersPage(),
+                        ),
                       );
                     },
                   ),
@@ -122,7 +130,9 @@ class AdminLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminTransactionsPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminTransactionsPage(),
+                        ),
                       );
                     },
                   ),
@@ -134,40 +144,38 @@ class AdminLayout extends StatelessWidget {
                     onTap: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const AdminProfilePage()),
+                        MaterialPageRoute(
+                          builder: (_) => const AdminProfilePage(),
+                        ),
                       );
                     },
                   ),
                   _buildDrawerItem(
-  context,
-  icon: Icons.logout,
-  title: 'Logout',
-  onTap: () async {
-    // Close drawer first (important)
-    Navigator.pop(context);
+                    context,
+                    icon: Icons.logout,
+                    title: 'Logout',
+                    onTap: () async {
+                      // Close drawer first (important)
+                      Navigator.pop(context);
 
-    // Sign out from Supabase
-    await Supabase.instance.client.auth.signOut();
+                      // Sign out from Supabase
+                      await Supabase.instance.client.auth.signOut();
 
-    // Navigate to login & clear navigation stack
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => LoginUIPage()),
-      (route) => false,
-    );
-  },
-),
-
+                      // Navigate to login & clear navigation stack
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => LoginUIPage()),
+                        (route) => false,
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 
@@ -183,9 +191,7 @@ class AdminLayout extends StatelessWidget {
         leading: Icon(icon),
         title: Text(title),
         onTap: onTap,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
       ),
     );
