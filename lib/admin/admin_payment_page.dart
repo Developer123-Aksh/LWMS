@@ -235,20 +235,12 @@ class _AdminPaymentsPageState extends State<AdminPaymentsPage> {
                     final amount =
                         int.tryParse(amountCtrl.text) ?? 0;
                     if (amount <= 0) return;
-
-                    final updatedDueAdvance =
-                        paymentType == 'ADVANCE'
-                            ? dueAdvance + amount
-                            : clearAdvance
-                                ? 0
-                                : dueAdvance;
-
                     await AdminPaymentService.makePayment(
                       venueId: _venueId!, // ✅ CRITICAL FIX
                       paidTo: user['id'],
                       amount: amount,
                       paymentType: paymentType,
-                      updatedDueAdvance: updatedDueAdvance,
+                      updatedDueAdvance: true,
                     );
 
                     if (mounted) Navigator.pop(context);

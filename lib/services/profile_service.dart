@@ -717,7 +717,7 @@ class AdminPaymentService {
   required String paidTo, // users.id
   required int amount,
   required String paymentType, // SALARY | ADVANCE
-  required int updatedDueAdvance,
+  required bool updatedDueAdvance,
 }) async {
   final uid = _uid();
 
@@ -733,7 +733,16 @@ class AdminPaymentService {
   if (organisationId == null) {
     throw Exception('Admin organisation not found');
   }
-
+  final uploadingValues = [
+    organisationId,
+    venueId,
+    uid,
+    paidTo,
+    amount,
+    paymentType,
+    updatedDueAdvance,
+  ];
+  debugPrint('AdminPaymentService.makePayment called with values: $uploadingValues');
   await _client.rpc(
     'process_payment',
     params: {
@@ -743,8 +752,9 @@ class AdminPaymentService {
       'p_paid_to': paidTo,
       'p_amount': amount,
       'p_payment_type': paymentType,
-      'p_updated_due_advance': updatedDueAdvance, // ✅ EXPLICIT
+      'p_clear_advance': updatedDueAdvance, // ✅ EXPLICIT
     },
+    
   );
 }
 
