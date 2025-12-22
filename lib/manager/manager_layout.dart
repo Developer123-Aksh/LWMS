@@ -18,11 +18,7 @@ class ManagerLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const ManagerLayout({
-    super.key,
-    required this.title,
-    required this.child,
-  });
+  const ManagerLayout({super.key, required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +52,7 @@ class ManagerLayout extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: const [
-                  CircleAvatar(
-                    radius: 30,
-                    child: Icon(Icons.badge, size: 32),
-                  ),
+                  CircleAvatar(radius: 30, child: Icon(Icons.badge, size: 32)),
                   SizedBox(height: 12),
                   Text(
                     'Manager Panel',
@@ -71,10 +64,7 @@ class ManagerLayout extends StatelessWidget {
                   ),
                   Text(
                     'Site Management',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -121,25 +111,18 @@ class ManagerLayout extends StatelessWidget {
                     leading: const Icon(Icons.logout),
                     title: const Text('Logout'),
                     onTap: () async {
-                      // Close drawer
-                      Navigator.pop(context);
+                      try {
+                        // Close drawer if present
+                        Navigator.of(context).pop();
 
-                      // Reset local app state
-                      themeProvider.resetToGuest();
-
-                      // Sign out from Supabase
-                      await Supabase.instance.client.auth.signOut();
-
-                      if (!context.mounted) return;
-
-                      // 🔥 FORCE NAVIGATION TO LOGIN
-                      Navigator.of(context, rootNavigator: true)
-                          .pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (_) => const LoginUIPage(),
-                        ),
-                        (_) => false,
-                      );
+                        // ONLY sign out
+                        await Supabase.instance.client.auth.signOut();
+                        // ❌ no navigation here
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Logout failed: $e')),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -149,10 +132,7 @@ class ManagerLayout extends StatelessWidget {
         ),
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 

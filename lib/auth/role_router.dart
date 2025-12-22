@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../theme_provider.dart';
-import '../auth/login_page.dart';
 import '../services/profile_service.dart';
+import '../auth/login_page.dart';
 
-import 'package:lwms/admin/admin_home.dart';
-import 'package:lwms/manager/manager_dashboard_page.dart';
-import 'package:lwms/supervisor/supervisor_dashboard_page.dart';
-import 'package:lwms/labour/labour_home.dart';
+import '../admin/admin_home.dart';
+import '../manager/manager_dashboard_page.dart';
+import '../supervisor/supervisor_dashboard_page.dart';
+import '../labour/labour_home.dart';
 
 class RoleRouter extends StatelessWidget {
   const RoleRouter({super.key});
@@ -17,33 +17,22 @@ class RoleRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
       future: ProfileService.fetchMe(),
-      builder: (context, snapshot) {
-        // ⏳ Loading
-        if (snapshot.connectionState == ConnectionState.waiting) {
+      builder: (context, s) {
+        if (s.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // ❌ Error
-        if (snapshot.hasError) {
-          // Reset theme + force login
-          context.read<ThemeProvider>().resetToGuest();
+        if (!s.hasData || s.hasError) {
           return const LoginUIPage();
         }
 
-        // ❌ No data
-        if (!snapshot.hasData || snapshot.data == null) {
-          context.read<ThemeProvider>().resetToGuest();
-          return const LoginUIPage();
-        }
+        final role = s.data!['role'];
+        final theme = context.read<ThemeProvider>();
 
-        final role = snapshot.data!['role'];
-
-        // ⚠️ Set role ONCE after frame
+        // Set role ONCE, safely
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          final theme = context.read<ThemeProvider>();
-
           switch (role) {
             case 'ADMIN':
               theme.setRole(UserRole.admin);
@@ -62,7 +51,6 @@ class RoleRouter extends StatelessWidget {
           }
         });
 
-        // 🧭 Route
         switch (role) {
           case 'ADMIN':
             return const AdminDashboardPage();

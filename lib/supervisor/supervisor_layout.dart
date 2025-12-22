@@ -13,11 +13,7 @@ class SupervisorLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const SupervisorLayout({
-    super.key,
-    required this.title,
-    required this.child,
-  });
+  const SupervisorLayout({super.key, required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -66,10 +62,7 @@ class SupervisorLayout extends StatelessWidget {
                   ),
                   Text(
                     'Team Management',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white70,
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.white70),
                   ),
                 ],
               ),
@@ -110,16 +103,18 @@ class SupervisorLayout extends StatelessWidget {
                     leading: const Icon(Icons.logout),
                     title: const Text('Logout'),
                     onTap: () async {
-                      Navigator.pop(context); // close drawer
+                      try {
+                        // Close drawer if present
+                        Navigator.of(context).pop();
 
-                      // 🔥 reset app state
-                      themeProvider.resetToGuest();
-
-                      // 🔐 sign out
-                      await Supabase.instance.client.auth.signOut();
-
-                      // ❌ NO navigation here
-                      // AuthGate will take over
+                        // ONLY sign out
+                        await Supabase.instance.client.auth.signOut();
+                        // ❌ no navigation here
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Logout failed: $e')),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -129,19 +124,16 @@ class SupervisorLayout extends StatelessWidget {
         ),
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
     );
   }
 
   Widget _item(
-      BuildContext context, {
-        required IconData icon,
-        required String title,
-        required Widget page,
-      }) {
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required Widget page,
+  }) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),

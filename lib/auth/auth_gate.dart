@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
-import 'login_page.dart';
+import '../theme_provider.dart';
+import '../auth/login_page.dart';
 import 'role_router.dart';
 
 class AuthGate extends StatelessWidget {
@@ -12,7 +14,7 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        // ⏳ WAITING — show loader instead of black screen
+        // ⏳ Waiting for Supabase
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -23,6 +25,11 @@ class AuthGate extends StatelessWidget {
 
         // 🔓 LOGGED OUT
         if (session == null) {
+          // IMPORTANT: reset theme ONLY here
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<ThemeProvider>().resetToGuest();
+          });
+
           return const LoginUIPage();
         }
 

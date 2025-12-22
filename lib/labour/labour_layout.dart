@@ -43,10 +43,7 @@ class LabourLayout extends StatelessWidget {
 
   void _navigateFromDrawer(BuildContext context, Widget page) {
     Navigator.pop(context);
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => page),
-    );
+    Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => page));
   }
 
   @override
@@ -65,10 +62,7 @@ class LabourLayout extends StatelessWidget {
         ],
       ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: child,
-      ),
+      body: Padding(padding: const EdgeInsets.all(16), child: child),
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: currentIndex, // ✅ ALWAYS CORRECT
@@ -85,10 +79,7 @@ class LabourLayout extends StatelessWidget {
             icon: Icon(Icons.payments),
             label: 'Payments',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
 
@@ -119,19 +110,18 @@ class LabourLayout extends StatelessWidget {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () async {
-                Navigator.pop(context);
-                themeProvider.resetToGuest();
-                await Supabase.instance.client.auth.signOut();
+                try {
+                  // Close drawer if present
+                  Navigator.of(context).pop();
 
-                if (!context.mounted) return;
-
-                Navigator.of(context, rootNavigator: true)
-                    .pushAndRemoveUntil(
-                  MaterialPageRoute(
-                    builder: (_) => const LoginUIPage(),
-                  ),
-                  (_) => false,
-                );
+                  // ONLY sign out
+                  await Supabase.instance.client.auth.signOut();
+                  // ❌ no navigation here
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+                }
               },
             ),
           ],
