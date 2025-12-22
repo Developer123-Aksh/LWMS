@@ -91,7 +91,6 @@ class AppTheme {
       case UserRole.labour:
         return const Color(0xFFE64A19); // Orange
       case UserRole.guest:
-      default:
         return const Color(0xFF607D8B); // Blue Grey (default)
     }
   }
