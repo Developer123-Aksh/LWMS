@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'admin_layout.dart';
 import '../services/profile_service.dart';
+import 'admin_payment_page.dart';
+import 'admin_transection_page.dart';
+import 'admin_users_page.dart';
 
 class AdminDashboardPage extends StatelessWidget {
   const AdminDashboardPage({super.key});
@@ -31,9 +34,11 @@ class AdminDashboardPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ===== WELCOME =====
                 _buildWelcomeCard(context, data['admin_name']),
                 const SizedBox(height: 24),
 
+                // ===== STATS =====
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -69,6 +74,13 @@ class AdminDashboardPage extends StatelessWidget {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 32),
+
+                // ===== QUICK ACTIONS AT BOTTOM =====
+                _buildQuickActions(context),
+
+                const SizedBox(height: 24),
               ],
             ),
           );
@@ -77,6 +89,7 @@ class AdminDashboardPage extends StatelessWidget {
     );
   }
 
+  // ===== WELCOME CARD =====
   Widget _buildWelcomeCard(BuildContext context, String adminName) {
     return Card(
       elevation: 0,
@@ -93,8 +106,9 @@ class AdminDashboardPage extends StatelessWidget {
                     'Welcome back, $adminName!',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color:
-                              Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimaryContainer,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -120,8 +134,70 @@ class AdminDashboardPage extends StatelessWidget {
       ),
     );
   }
+
+  // ===== QUICK ACTIONS =====
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 12),
+
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _QuickActionButton(
+              icon: Icons.person_add,
+              label: 'Add User',
+              color: const Color(0xFF1976D2),
+              onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersPage()));
+              },
+            ),
+            _QuickActionButton(
+              icon: Icons.payments,
+              label: 'Make Payment',
+              color: const Color(0xFF388E3C),
+              onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AdminPaymentsPage()));
+              },
+            ),
+            _QuickActionButton(
+              icon: Icons.receipt_long,
+              label: 'Transactions',
+              color: const Color(0xFFE64A19),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AdminTransactionsPage()));
+              },
+            ),
+            _QuickActionButton(
+              icon: Icons.groups,
+              label: 'View Users',
+              color: const Color(0xFF7B1FA2),
+              onTap: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const AdminUsersPage()));
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
+// ===== STAT CARD =====
 class _StatCard extends StatelessWidget {
   final String title;
   final String value;
@@ -172,6 +248,51 @@ class _StatCard extends StatelessWidget {
                       ),
                 ),
               ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ===== QUICK ACTION BUTTON =====
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
           ],
         ),

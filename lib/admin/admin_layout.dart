@@ -11,13 +11,17 @@ import 'admin_users_page.dart';
 import 'admin_profile_page.dart';
 import 'admin_payment_page.dart';
 import 'admin_transection_page.dart';
-
+import 'admin_change_site_page.dart'; // ✅ NEW
 
 class AdminLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const AdminLayout({super.key, required this.title, required this.child});
+  const AdminLayout({
+    super.key,
+    required this.title,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +88,15 @@ class AdminLayout extends StatelessWidget {
                     title: 'Sites',
                     page: const AdminSitesPage(),
                   ),
+
+                  // ===== CHANGE SITE (ADMIN ONLY) =====
+                  _item(
+                    context,
+                    icon: Icons.swap_horiz,
+                    title: 'Move Site',
+                    page: const AdminChangeSitePage(),
+                  ),
+
                   _item(
                     context,
                     icon: Icons.payment,
@@ -102,7 +115,9 @@ class AdminLayout extends StatelessWidget {
                     title: 'Transactions',
                     page: const AdminTransactionsPage(),
                   ),
+
                   const Divider(height: 32),
+
                   _item(
                     context,
                     icon: Icons.person,
@@ -110,18 +125,15 @@ class AdminLayout extends StatelessWidget {
                     page: const AdminProfilePage(),
                   ),
 
-                  /// ================= LOGOUT (FIXED) =================
+                  // ================= LOGOUT =================
                   ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Logout'),
                     onTap: () async {
                       try {
-                        // Close drawer if present
-                        Navigator.of(context).pop();
-
-                        // ONLY sign out
+                        Navigator.of(context).pop(); // close drawer
                         await Supabase.instance.client.auth.signOut();
-                        // ❌ no navigation here
+                        // ❌ no manual navigation (AuthGate handles it)
                       } catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Logout failed: $e')),
@@ -136,7 +148,10 @@ class AdminLayout extends StatelessWidget {
         ),
       ),
 
-      body: Padding(padding: const EdgeInsets.all(16), child: child),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
+      ),
     );
   }
 

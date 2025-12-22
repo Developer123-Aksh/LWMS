@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manager_layout.dart';
-// import 'manager_transactions_page.dart';
 import 'manager_payments_page.dart';
 import 'manager_labours_page.dart';
+
 class ManagerDashboardPage extends StatefulWidget {
   const ManagerDashboardPage({super.key});
 
@@ -30,7 +30,6 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
       throw Exception('Not authenticated');
     }
 
-    // 1️⃣ get manager info
     final me = await client
         .from('users')
         .select('organisation_id, venue_id, organisations(name), venues(name)')
@@ -40,7 +39,6 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
     final orgId = me['organisation_id'];
     final venueId = me['venue_id'];
 
-    // 2️⃣ counts
     final labours = await client
         .from('users')
         .select('id')
@@ -53,7 +51,6 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
         .eq('venue_id', venueId)
         .eq('role', 'SUPERVISOR');
 
-    // 3️⃣ today payments
     final today = DateTime.now();
     final startOfDay =
         DateTime(today.year, today.month, today.day).toIso8601String();
@@ -110,6 +107,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                 _buildWelcomeCard(context, data),
                 const SizedBox(height: 24),
 
+                // ===== STATS =====
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -117,7 +115,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       MediaQuery.of(context).size.width > 800 ? 4 : 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 0.7,
+                  childAspectRatio: 0.75,
                   children: [
                     _StatCard(
                       title: 'Total Labours',
@@ -131,7 +129,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       value: data.supervisorCount.toString(),
                       icon: Icons.badge,
                       color: const Color(0xFF388E3C),
-                      trend: 'All sites',
+                      trend: 'Assigned',
                     ),
                     _StatCard(
                       title: 'Today Payments',
@@ -143,8 +141,12 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                   ],
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
+
+                // ===== QUICK ACTIONS (BOTTOM) =====
                 _buildQuickActions(context),
+
+                const SizedBox(height: 24),
               ],
             ),
           );
@@ -155,8 +157,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
 
   // ================= WELCOME =================
 
-  Widget _buildWelcomeCard(
-      BuildContext context, _DashboardData data) {
+  Widget _buildWelcomeCard(BuildContext context, _DashboardData data) {
     final hour = DateTime.now().hour;
     String greeting = 'Good Morning';
     if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
@@ -205,76 +206,97 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
           'Quick Actions',
           style: Theme.of(context)
               .textTheme
-              .titleLarge
+              .titleMedium
               ?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
-            _action(
-              context,
+            _QuickActionButton(
               icon: Icons.person_add,
               label: 'Add Labour',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManagerTeamPage(),
-                ),
-              ),
+              color: const Color(0xFF7B1FA2),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ManagerTeamPage(),
+                  ),
+                );
+              },
             ),
-            _action(
-              context,
+            _QuickActionButton(
               icon: Icons.payments,
               label: 'Make Payment',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManagerPaymentsPage(),
-                ),
-              ),
+              color: const Color(0xFFE64A19),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ManagerPaymentsPage(),
+                  ),
+                );
+              },
             ),
-            _action(
-              context,
+            _QuickActionButton(
               icon: Icons.receipt_long,
               label: 'Transactions',
-              onTap: () => Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const ManagerPaymentsPage(),
-                ),
-              ),
+              color: const Color(0xFF388E3C),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ManagerPaymentsPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _action(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 160,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                Icon(icon, size: 32),
-                const SizedBox(height: 12),
-                Text(label,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
-              ],
+// ================= QUICK ACTION BUTTON =================
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 28, color: color),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -291,13 +313,12 @@ class _StatCard extends StatelessWidget {
   final String trend;
 
   const _StatCard({
-    Key? key,
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
     required this.trend,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -311,8 +332,8 @@ class _StatCard extends StatelessWidget {
           children: [
             CircleAvatar(
               backgroundColor: color.withOpacity(0.15),
-              child: Icon(icon, color: color, size: 28),
               radius: 28,
+              child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(height: 16),
             Text(
@@ -323,16 +344,14 @@ class _StatCard extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 8),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title),
             const SizedBox(height: 4),
             Text(
               trend,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Colors.grey[700],
-                  ),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: Colors.grey[700]),
             ),
           ],
         ),
