@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manager_layout.dart';
+import '../services/profile_service.dart';
 
 class ManagerPaymentsPage extends StatefulWidget {
   const ManagerPaymentsPage({super.key});
@@ -10,240 +10,211 @@ class ManagerPaymentsPage extends StatefulWidget {
 }
 
 class _ManagerPaymentsPageState extends State<ManagerPaymentsPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _amountController = TextEditingController();
-  final _notesController = TextEditingController();
-
-  String? _selectedLabourId;
-  String? _paymentType;
-  String? _paymentMethod;
-
-  late Future<List<Map<String, dynamic>>> _laboursFuture;
-  late Future<List<Map<String, dynamic>>> _recentFuture;
+  String _roleFilter = 'ALL';
+  late Future<List<Map<String, dynamic>>> _teamFuture;
 
   @override
   void initState() {
     super.initState();
-    _laboursFuture = _fetchLabours();
-    _recentFuture = _fetchRecentPayments();
+    _load();
   }
 
-  @override
-  void dispose() {
-    _amountController.dispose();
-    _notesController.dispose();
-    super.dispose();
-  }
-
-  // ================= DATA =================
-
-  Future<List<Map<String, dynamic>>> _fetchLabours() async {
-    final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
-
-    final me = await client
-        .from('users')
-        .select('organisation_id')
-        .eq('id', uid)
-        .single();
-
-    return await client
-        .from('users')
-        .select('id, name')
-        .eq('organisation_id', me['organisation_id'])
-        .eq('role', 'LABOUR')
-        .eq('status', 'ACTIVE');
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchRecentPayments() async {
-    final client = Supabase.instance.client;
-    final uid = client.auth.currentUser!.id;
-
-    final me = await client
-        .from('users')
-        .select('organisation_id')
-        .eq('id', uid)
-        .single();
-
-    return await client
-        .from('transactions')
-        .select('''
-          id,
-          amount,
-          created_at,
-          payment_type,
-          paid_to:users!transactions_paid_to_fkey(name)
-        ''')
-        .eq('organisation_id', me['organisation_id'])
-        .order('created_at', ascending: false)
-        .limit(5);
-  }
-
-  // ================= INSERT PAYMENT =================
-
-  Future<void> _processPayment() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final client = Supabase.instance.client;
-    final user = client.auth.currentUser!;
-
-    final me = await client
-        .from('users')
-        .select('organisation_id, venue_id')
-        .eq('id', user.id)
-        .single();
-
-    await client.from('transactions').insert({
-      'organisation_id': me['organisation_id'],
-      'venue_id': me['venue_id'],
-      'paid_by': user.id,
-      'paid_to': _selectedLabourId,
-      'amount': int.parse(_amountController.text),
-      'payment_type': _paymentType,
-      'note': _notesController.text.isEmpty ? null : _notesController.text,
-      'status': 'ACTIVE',
-    });
-
-    _clearForm();
+  void _load() {
     setState(() {
-      _recentFuture = _fetchRecentPayments();
+      _teamFuture = ManagerPaymentService.fetchTeam(role: _roleFilter);
     });
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment recorded successfully')),
-      );
-    }
   }
-
-  // ================= UI =================
 
   @override
   Widget build(BuildContext context) {
     return ManagerLayout(
       title: 'Payments',
-      child: SingleChildScrollView(
-        child: Column(
-          children: [
-            _paymentForm(context),
-            const SizedBox(height: 24),
-            _recentPayments(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _paymentForm(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
+      child: Column(
+        children: [
+          /// ===== FILTER =====
+          Row(
             children: [
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: _laboursFuture,
-                builder: (_, snap) {
-                  if (!snap.hasData) {
-                    return const CircularProgressIndicator();
-                  }
-
-                  return DropdownButtonFormField<String>(
-                    value: _selectedLabourId,
-                    items: snap.data!
-                        .map((l) => DropdownMenuItem<String>(
-                              value: l['id'] as String,
-                              child: Text(l['name'] as String),
-                            ))
-                        .toList(),
-                    decoration: const InputDecoration(
-                      labelText: 'Select Labour',
-                    ),
-                    onChanged: (v) => setState(() => _selectedLabourId = v),
-                    validator: (v) =>
-                        v == null ? 'Select a labour' : null,
-                  );
-                },
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Amount'),
-                validator: (v) =>
-                    v == null || v.isEmpty ? 'Enter amount' : null,
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                value: _paymentType,
+              DropdownButton<String>(
+                value: _roleFilter,
                 items: const [
-                  DropdownMenuItem(value: 'SALARY', child: Text('Salary')),
-                  DropdownMenuItem(value: 'ADVANCE', child: Text('Advance')),
+                  DropdownMenuItem(value: 'ALL', child: Text('All')),
+                  DropdownMenuItem(
+                      value: 'SUPERVISOR', child: Text('Supervisor')),
+                  DropdownMenuItem(value: 'LABOUR', child: Text('Labour')),
                 ],
-                decoration:
-                    const InputDecoration(labelText: 'Payment Type'),
-                onChanged: (v) => setState(() => _paymentType = v),
-                validator: (v) => v == null ? 'Select type' : null,
-              ),
-              const SizedBox(height: 16),
-
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(labelText: 'Notes'),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 24),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _processPayment,
-                  child: const Text('Process Payment'),
-                ),
+                onChanged: (v) {
+                  if (v == null) return;
+                  _roleFilter = v;
+                  _load();
+                },
               ),
             ],
           ),
-        ),
+
+          const SizedBox(height: 12),
+
+          /// ===== TEAM LIST =====
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _teamFuture,
+              builder: (_, s) {
+                if (s.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!s.hasData || s.data!.isEmpty) {
+                  return const Center(child: Text('No users found'));
+                }
+
+                return ListView.separated(
+                  itemCount: s.data!.length,
+                  separatorBuilder: (_, __) => const Divider(),
+                  itemBuilder: (_, i) {
+                    final u = s.data![i];
+                    final dueAdvance = (u['due_advance'] as int?) ?? 0;
+
+                    return ListTile(
+                      title: Text(u['name']),
+                      subtitle: Text(u['role']),
+                      trailing: Text(
+                        'Due: ₹ $dueAdvance',
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                      onTap: () => _openPaymentDialog(u),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _recentPayments(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _recentFuture,
-      builder: (_, snap) {
-        if (!snap.hasData) return const SizedBox();
+  /// ===============================
+  /// PAYMENT DIALOG
+  /// ===============================
+  void _openPaymentDialog(Map<String, dynamic> user) {
+    final amountCtrl = TextEditingController();
+    String type = 'ADVANCE';
+    bool clearAdvance = false;
 
-        return Card(
-          child: ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: snap.data!.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) {
-              final tx = snap.data![i];
-              return ListTile(
-                title: Text(tx['paid_to']['name']),
-                trailing: Text('₹ ${tx['amount']}'),
-                subtitle: Text(tx['payment_type']),
-              );
-            },
-          ),
-        );
-      },
+    final salary = (user['salary'] as int?) ?? 0;
+    final dueAdvance = (user['due_advance'] as int?) ?? 0;
+    final remainingSalary = (user['remaining_salary'] as int?) ?? 0;
+
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+          final payable = remainingSalary;
+
+          return AlertDialog(
+            title: Text('Pay ${user['name']}'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Salary: ₹ $salary'),
+                Text('Due Advance: ₹ $dueAdvance'),
+                const SizedBox(height: 12),
+
+                DropdownButton<String>(
+                  value: type,
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'ADVANCE', child: Text('Advance')),
+                    DropdownMenuItem(
+                        value: 'SALARY', child: Text('Salary')),
+                  ],
+                  onChanged: (v) {
+                    if (v == null) return;
+                    setState(() {
+                      type = v;
+                      clearAdvance = false;
+                      amountCtrl.clear();
+                    });
+                  },
+                ),
+
+                if (type == 'SALARY')
+                  CheckboxListTile(
+                    value: clearAdvance,
+                    title: const Text('Clear Advance'),
+                    onChanged: (v) {
+                      if (v == null) return;
+                      setState(() {
+                        clearAdvance = v;
+                        amountCtrl.text =
+                        clearAdvance ? payable.toString() : '';
+                      });
+                    },
+                  ),
+
+                TextField(
+                  controller: amountCtrl,
+                  readOnly: type == 'SALARY' && clearAdvance,
+                  keyboardType: TextInputType.number,
+                  decoration:
+                  const InputDecoration(labelText: 'Amount'),
+                ),
+
+                if (type == 'SALARY' && clearAdvance)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      '₹ $salary − ₹ $dueAdvance = ₹ $payable',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (amountCtrl.text.isEmpty) return;
+
+                  try {
+                    debugPrint('DBG: Calling makePayment');
+
+                    await ManagerPaymentService.makePayment(
+                      paidTo: user['id'],
+                      amount: int.parse(amountCtrl.text),
+                      paymentType: type,
+                      clearAdvance: clearAdvance,
+                    );
+
+                    debugPrint('DBG: Payment successful');
+
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      _load();
+                    }
+                  } catch (e, st) {
+                    debugPrint('❌ Payment failed: $e');
+                    debugPrintStack(stackTrace: st);
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Payment failed: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Pay'),
+              ),
+            ],
+          );
+        },
+      ),
     );
-  }
-
-  void _clearForm() {
-    setState(() {
-      _selectedLabourId = null;
-      _paymentType = null;
-      _paymentMethod = null;
-      _amountController.clear();
-      _notesController.clear();
-    });
   }
 }

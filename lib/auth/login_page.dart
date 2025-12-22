@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../app_routes.dart';
+import 'register_org_page.dart';
+
 
 class LoginUIPage extends StatelessWidget {
   const LoginUIPage({super.key});
@@ -73,11 +74,22 @@ class LoginUIPage extends StatelessWidget {
                       height: 48,
                       child: ElevatedButton(
                         onPressed: () async {
-                          await Supabase.instance.client.auth
-                              .signInWithPassword(
-                            email: emailController.text.trim(),
-                            password: passwordController.text,
-                          );
+                          try {
+                            await Supabase.instance.client.auth
+                                .signInWithPassword(
+                              email: emailController.text.trim(),
+                              password: passwordController.text,
+                            );
+                            // ❌ NO NAVIGATION HERE
+                            // AuthGate will rebuild automatically
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e.toString()),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         child: const Text(
                           'Login',
@@ -87,10 +99,16 @@ class LoginUIPage extends StatelessWidget {
                     ),
 
                     const SizedBox(height: 12),
+
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(
-                            context, AppRoutes.registerOrg);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const RegisterOrganisationUIPage(),
+                          ),
+                        );
                       },
                       child: const Text(
                         'Register Organisation',

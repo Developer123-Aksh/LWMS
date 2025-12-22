@@ -163,6 +163,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final emailCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
+    final salaryCtrl = TextEditingController(); // ✅ USED NOW
 
     String role = 'LABOUR';
     String? venueId;
@@ -175,9 +176,23 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-              TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile')),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: mobileCtrl,
+                decoration: const InputDecoration(labelText: 'Mobile'),
+              ),
+              TextField(
+                controller: salaryCtrl, // ✅ SALARY INPUT
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Salary'),
+              ),
               TextField(
                 controller: passwordCtrl,
                 decoration: const InputDecoration(labelText: 'Password'),
@@ -206,7 +221,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         child: Text('Not Assigned'),
                       ),
                       ...s.data!.map(
-                        (v) => DropdownMenuItem(
+                            (v) => DropdownMenuItem(
                           value: v['id'],
                           child: Text(v['name']),
                         ),
@@ -220,19 +235,24 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             child: const Text('Create'),
             onPressed: () async {
               Navigator.pop(context);
 
+              final salary = int.tryParse(salaryCtrl.text.trim()) ?? 0;
+
               final admin = await Supabase.instance.client
                   .from('users')
                   .select('organisation_id')
                   .eq(
-                    'id',
-                    Supabase.instance.client.auth.currentUser!.id,
-                  )
+                'id',
+                Supabase.instance.client.auth.currentUser!.id,
+              )
                   .single();
 
               final res = await Supabase.instance.client.functions.invoke(
@@ -245,6 +265,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   'role': role,
                   'organisation_id': admin['organisation_id'],
                   'venue_id': venueId,
+                  'salary': salary,              // ✅ FIXED
+                  'remaining_salary': salary,    // ✅ FIXED
                 },
               );
 
@@ -259,6 +281,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       ),
     );
   }
+
 
   // ================= RESET PASSWORD =================
 

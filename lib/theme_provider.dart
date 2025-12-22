@@ -1,164 +1,98 @@
 import 'package:flutter/material.dart';
 
-// Theme Provider for managing dark/light mode
+enum UserRole {
+  admin,
+  manager,
+  supervisor,
+  labour,
+  guest, // default / logged out
+}
+
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
-  UserRole? _role;
-  
-  ThemeMode get themeMode => _themeMode;
-  UserRole? get role => _role;
+  UserRole _role = UserRole.guest;
 
-  
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
-    notifyListeners();
-  }
-  
+  ThemeMode get themeMode => _themeMode;
+  UserRole get role => _role;
+
   void toggleTheme() {
-    _themeMode = _themeMode == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
+    _themeMode =
+    _themeMode == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
     notifyListeners();
   }
+
   void setRole(UserRole role) {
     if (_role == role) return;
     _role = role;
     notifyListeners();
   }
-  void clearRole() {
-    _role = null;
+
+  /// 🔥 MUST be called on logout
+  void resetToGuest() {
+    _role = UserRole.guest;
+    _themeMode = ThemeMode.system;
     notifyListeners();
   }
 }
 
-// Role-based color schemes
-enum UserRole { admin, manager, supervisor, labour,guest }
-
-class RoleColors {
-  static const Map<UserRole, Color> primaryColors = {
-    UserRole.admin: Color(0xFF1976D2), // Blue
-    UserRole.manager: Color(0xFF7B1FA2), // Purple
-    UserRole.supervisor: Color(0xFF388E3C), // Green
-    UserRole.labour: Color(0xFFE64A19), // Orange
-    UserRole.guest: Color(0xFF607D8B), // Blue Grey
-  };
-  
-  static const Map<UserRole, Color> darkPrimaryColors = {
-    UserRole.admin: Color(0xFF42A5F5), // Light Blue
-    UserRole.manager: Color(0xFFAB47BC), // Light Purple
-    UserRole.supervisor: Color(0xFF66BB6A), // Light Green
-    UserRole.labour: Color(0xFFFF7043), // Light Orange
-    UserRole.guest: Color(0xFF90A4AE), // Light Blue Grey
-  };
-  
-  static Color getPrimaryColor(UserRole role, bool isDark) {
-    return isDark ? darkPrimaryColors[role]! : primaryColors[role]!;
-  }
-}
-
-// Theme configuration
+/// ======================================================
+/// APP THEME DEFINITIONS
+/// ======================================================
 class AppTheme {
+  /// ---------- LIGHT ----------
   static ThemeData lightTheme(UserRole role) {
-    final primaryColor = RoleColors.primaryColors[role]!;
-    
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
+        seedColor: _primaryColor(role),
         brightness: Brightness.light,
       ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
       appBarTheme: AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: primaryColor,
+        backgroundColor: _primaryColor(role),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
-      drawerTheme: DrawerThemeData(
-        backgroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 2,
-        ),
-      ),
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: _primaryColor(role),
       ),
     );
   }
-  
+
+  /// ---------- DARK ----------
   static ThemeData darkTheme(UserRole role) {
-    final primaryColor = RoleColors.darkPrimaryColors[role]!;
-    
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
+        seedColor: _primaryColor(role),
         brightness: Brightness.dark,
       ),
-      cardTheme: CardThemeData(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: const Color(0xFF1E1E1E),
-      ),
       appBarTheme: AppBarTheme(
-        centerTitle: false,
+        backgroundColor: Colors.grey[900],
+        foregroundColor: _primaryColor(role),
         elevation: 0,
-        backgroundColor: const Color(0xFF1E1E1E),
-        foregroundColor: primaryColor,
       ),
-      drawerTheme: const DrawerThemeData(
-        backgroundColor: Color(0xFF1E1E1E),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFF2C2C2C),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primaryColor, width: 2),
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 2,
-        ),
-      ),
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: _primaryColor(role),
       ),
     );
+  }
+
+  /// ---------- ROLE COLORS ----------
+  static Color _primaryColor(UserRole role) {
+    switch (role) {
+      case UserRole.admin:
+        return const Color(0xFF1976D2); // Blue
+      case UserRole.manager:
+        return const Color(0xFF7B1FA2); // Purple
+      case UserRole.supervisor:
+        return const Color(0xFF388E3C); // Green
+      case UserRole.labour:
+        return const Color(0xFFE64A19); // Orange
+      case UserRole.guest:
+      default:
+        return const Color(0xFF607D8B); // Blue Grey (default)
+    }
   }
 }

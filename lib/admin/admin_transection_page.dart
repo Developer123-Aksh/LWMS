@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'admin_layout.dart';
+import '../services/profile_service.dart';
 
 class AdminTransactionsPage extends StatefulWidget {
   const AdminTransactionsPage({super.key});
@@ -9,252 +11,174 @@ class AdminTransactionsPage extends StatefulWidget {
 }
 
 class _AdminTransactionsPageState extends State<AdminTransactionsPage> {
-  String _selectedSite = 'All';
-  String _selectedType = 'All';
-  DateTimeRange? _dateRange;
+  DateTimeRange? _range;
+  String _site = 'ALL';
+  String _type = 'ALL';
+
+  late Future<List<Map<String, dynamic>>> _txnsFuture;
+  late Future<Map<String, dynamic>> _summaryFuture;
+  late Future<List<Map<String, dynamic>>> _sitesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _reload();
+    _sitesFuture = AdminTransactionsService.fetchSites();
+  }
+
+  void _reload() {
+    _txnsFuture = AdminTransactionsService.fetchTransactions(
+      range: _range,
+      siteId: _site,
+      type: _type,
+    );
+    _summaryFuture = AdminTransactionsService.fetchSummary();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AdminLayout(
       title: 'Transactions',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Cards
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildSummaryCard(
-                  context,
-                  title: 'Total Payout',
-                  value: '₹ 6,80,000',
-                  subtitle: 'This Month',
-                  icon: Icons.payments,
-                  color: Colors.green,
-                ),
-                const SizedBox(width: 12),
-                _buildSummaryCard(
-                  context,
-                  title: 'Transactions',
-                  value: '245',
-                  subtitle: 'This Month',
-                  icon: Icons.receipt_long,
-                  color: Colors.blue,
-                ),
-              ],
-            ),
+          /// ===== SUMMARY =====
+          FutureBuilder<Map<String, dynamic>>(
+            future: _summaryFuture,
+            builder: (_, s) {
+              if (!s.hasData) return const SizedBox();
+              return Row(
+                children: [
+                  _summary('Total Payout', '₹ ${s.data!['total_payout']}'),
+                  _summary('Transactions', s.data!['count'].toString()),
+                ],
+              );
+            },
           ),
-          const SizedBox(height: 24),
 
-          // Filters
+          const SizedBox(height: 12),
+
+          /// ===== FILTERS =====
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(12),
               child: Wrap(
                 spacing: 12,
-                runSpacing: 12,
                 children: [
-                  // Date Range Filter
-                  SizedBox(
-                    width: 200,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _selectDateRange(context),
-                      icon: const Icon(Icons.date_range),
-                      label: Text(
-                        _dateRange == null
-                            ? 'Select Date Range'
-                            : '${_dateRange!.start.day}/${_dateRange!.start.month} - ${_dateRange!.end.day}/${_dateRange!.end.month}',
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      ),
-                    ),
-                  ),
-                  
-                  // Site Filter
-                  SizedBox(
-                    width: 180,
-                    child: DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Site',
-                        prefixIcon: Icon(Icons.location_city),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      value: _selectedSite,
-                      items: const [
-                        DropdownMenuItem(value: 'All', child: Text('All Sites')),
-                        DropdownMenuItem(value: 'Site A', child: Text('Site A')),
-                        DropdownMenuItem(value: 'Site B', child: Text('Site B')),
-                        DropdownMenuItem(value: 'Site C', child: Text('Site C')),
-                      ],
-                      onChanged: (value) {
+                  OutlinedButton(
+                    child: Text(_range == null
+                        ? 'Date Range'
+                        : '${DateFormat('dd/MM').format(_range!.start)} - ${DateFormat('dd/MM').format(_range!.end)}'),
+                    onPressed: () async {
+                      final r = await showDateRangePicker(
+                        context: context,
+                        firstDate: DateTime(2024),
+                        lastDate: DateTime.now(),
+                      );
+                      if (r != null) {
                         setState(() {
-                          _selectedSite = value!;
+                          _range = r;
+                          _reload();
                         });
-                      },
-                    ),
+                      }
+                    },
                   ),
 
-                  // Type Filter
-                  SizedBox(
-                    width: 180,
-                    child: DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
-                        labelText: 'Type',
-                        prefixIcon: Icon(Icons.category),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                      value: _selectedType,
-                      items: const [
-                        DropdownMenuItem(value: 'All', child: Text('All Types')),
-                        DropdownMenuItem(value: 'Labour Payment', child: Text('Labour Payment')),
-                        DropdownMenuItem(value: 'Material', child: Text('Material')),
-                        DropdownMenuItem(value: 'Equipment', child: Text('Equipment')),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          _selectedType = value!;
-                        });
-                      },
-                    ),
+                  /// Site
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _sitesFuture,
+                    builder: (_, s) {
+                      if (!s.hasData) return const SizedBox();
+                      return DropdownButton<String>(
+                        value: _site,
+                        items: [
+                          const DropdownMenuItem(value: 'ALL', child: Text('All Sites')),
+                          ...s.data!.map((v) => DropdownMenuItem(
+                                value: v['id'],
+                                child: Text(v['name']),
+                              )),
+                        ],
+                        onChanged: (v) {
+                          setState(() {
+                            _site = v!;
+                            _reload();
+                          });
+                        },
+                      );
+                    },
                   ),
 
-                  // Clear Filters
-                  ElevatedButton.icon(
-                    onPressed: () {
+                  /// Type
+                  DropdownButton<String>(
+                    value: _type,
+                    items: const [
+                      DropdownMenuItem(value: 'ALL', child: Text('All Types')),
+                      DropdownMenuItem(value: 'ADVANCE', child: Text('Advance')),
+                      DropdownMenuItem(value: 'SALARY', child: Text('Salary')),
+                    ],
+                    onChanged: (v) {
                       setState(() {
-                        _selectedSite = 'All';
-                        _selectedType = 'All';
-                        _dateRange = null;
+                        _type = v!;
+                        _reload();
                       });
                     },
-                    icon: const Icon(Icons.clear),
-                    label: const Text('Clear'),
-                  ),
-
-                  // Export Button
-                  ElevatedButton.icon(
-                    onPressed: () => _showExportDialog(context),
-                    icon: const Icon(Icons.file_download),
-                    label: const Text('Export'),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 8),
+
+          /// ===== LIST =====
+          Expanded(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _txnsFuture,
+              builder: (_, s) {
+                if (!s.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (s.data!.isEmpty) {
+                  return const Center(child: Text('No transactions'));
+                }
+
+                return ListView.builder(
+                  itemCount: s.data!.length,
+                  itemBuilder: (_, i) {
+                    final t = s.data![i];
+                    return ListTile(
+                      title: Text('₹ ${t['amount']} • ${t['payment_type']}'),
+                      subtitle: Text(
+                        '${t['paid_to']['name']} ← ${t['paid_by']['name']}',
+                      ),
+                      trailing: Text(
+                        DateFormat('dd MMM').format(
+                          DateTime.parse(t['created_at']),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryCard(
-    BuildContext context, {
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Card(
-      child: Container(
-        width: 175,
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).textTheme.bodySmall?.color,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-
-
-
-  Future<void> _selectDateRange(BuildContext context) async {
-    final picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2024),
-      lastDate: DateTime.now(),
-      initialDateRange: _dateRange,
-    );
-    if (picked != null) {
-      setState(() {
-        _dateRange = picked;
-      });
-    }
-  }
-
-
-
-  void _showExportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Export Transactions'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.picture_as_pdf),
-              title: const Text('Export as PDF'),
-              onTap: () {
-                Navigator.pop(context);
-                // Export as PDF
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.table_chart),
-              title: const Text('Export as Excel'),
-              onTap: () {
-                Navigator.pop(context);
-                // Export as Excel
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.text_snippet),
-              title: const Text('Export as CSV'),
-              onTap: () {
-                Navigator.pop(context);
-                // Export as CSV
-              },
-            ),
-          ],
+  Widget _summary(String title, String value) {
+    return Expanded(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(title),
+            ],
+          ),
         ),
       ),
     );

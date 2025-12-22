@@ -24,6 +24,7 @@ class _LabourProfilePageState extends State<LabourProfilePage> {
   Widget build(BuildContext context) {
     return LabourLayout(
       title: 'My Profile',
+      currentIndex: 2,
       child: FutureBuilder<Map<String, dynamic>>(
         future: _profileFuture,
         builder: (context, snapshot) {

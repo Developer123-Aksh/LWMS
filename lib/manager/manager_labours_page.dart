@@ -145,6 +145,7 @@ class _ManagerTeamPageState extends State<ManagerTeamPage> {
     final emailCtrl = TextEditingController();
     final mobileCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
+    final salaryCtrl = TextEditingController(); // ✅ NEW
     String role = 'LABOUR';
 
     showDialog(
@@ -154,9 +155,23 @@ class _ManagerTeamPageState extends State<ManagerTeamPage> {
         content: SingleChildScrollView(
           child: Column(
             children: [
-              TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name')),
-              TextField(controller: emailCtrl, decoration: const InputDecoration(labelText: 'Email')),
-              TextField(controller: mobileCtrl, decoration: const InputDecoration(labelText: 'Mobile')),
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: emailCtrl,
+                decoration: const InputDecoration(labelText: 'Email'),
+              ),
+              TextField(
+                controller: mobileCtrl,
+                decoration: const InputDecoration(labelText: 'Mobile'),
+              ),
+              TextField(
+                controller: salaryCtrl, // ✅ NEW
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Salary'),
+              ),
               TextField(
                 controller: passwordCtrl,
                 decoration: const InputDecoration(labelText: 'Password'),
@@ -176,18 +191,24 @@ class _ManagerTeamPageState extends State<ManagerTeamPage> {
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             child: const Text('Create'),
             onPressed: () async {
               Navigator.pop(context);
+
               await ManagerService.createUserByManager(
-                name: nameCtrl.text,
-                email: emailCtrl.text,
-                mobile: mobileCtrl.text,
+                name: nameCtrl.text.trim(),
+                email: emailCtrl.text.trim(),
+                mobile: mobileCtrl.text.trim(),
                 password: passwordCtrl.text,
                 role: role,
+                salary: int.tryParse(salaryCtrl.text) ?? 0, // ✅ NEW
               );
+
               setState(_reload);
             },
           ),

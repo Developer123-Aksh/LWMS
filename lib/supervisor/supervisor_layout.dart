@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../theme_provider.dart';
+
 import 'supervisor_dashboard_page.dart';
 import 'supervisor_profile_page.dart';
 import 'supervisor_labours_page.dart';
 import 'supervisor_transactions_page.dart';
-import '../theme_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupervisorLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const SupervisorLayout({super.key, required this.title, required this.child});
+  const SupervisorLayout({
+    super.key,
+    required this.title,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = context.read<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -24,12 +30,11 @@ class SupervisorLayout extends StatelessWidget {
         actions: [
           IconButton(
             icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-            tooltip: isDark ? 'Light Mode' : 'Dark Mode',
-            onPressed: () => themeProvider.toggleTheme(),
+            onPressed: themeProvider.toggleTheme,
           ),
-          const SizedBox(width: 8),
         ],
       ),
+
       drawer: Drawer(
         child: Column(
           children: [
@@ -40,123 +45,81 @@ class SupervisorLayout extends StatelessWidget {
                     Theme.of(context).colorScheme.primary,
                     Theme.of(context).colorScheme.primaryContainer,
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
-                children: [
+                children: const [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: Colors.white.withOpacity(0.3),
-                    child: Icon(
-                      Icons.supervisor_account,
-                      size: 32,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
+                    child: Icon(Icons.supervisor_account, size: 32),
                   ),
-                  const SizedBox(height: 12),
+                  SizedBox(height: 12),
                   Text(
                     'Supervisor Panel',
                     style: TextStyle(
-                      color: isDark ? Colors.white : Colors.white,
-                      fontSize: 24,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                   Text(
                     'Team Management',
                     style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.white70,
                       fontSize: 14,
+                      color: Colors.white70,
                     ),
                   ),
                 ],
               ),
             ),
+
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
-                  _buildDrawerItem(
+                  _item(
                     context,
                     icon: Icons.dashboard,
                     title: 'Dashboard',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SupervisorDashboardPage(),
-                        ),
-                      );
-                    },
+                    page: const SupervisorDashboardPage(),
                   ),
-                  _buildDrawerItem(
+                  _item(
                     context,
                     icon: Icons.groups,
                     title: 'Team Members',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SupervisorLaboursPage(),
-                        ),
-                      );
-                    },
+                    page: const SupervisorLaboursPage(),
                   ),
-                 
-                  _buildDrawerItem(
+                  _item(
                     context,
                     icon: Icons.receipt,
                     title: 'Transactions',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SupervisorTransactionsPage(),
-                        ),
-                      );
-                    },
+                    page: const SupervisorTransactionsPage(),
                   ),
                   const Divider(height: 32),
-                  _buildDrawerItem(
+                  _item(
                     context,
                     icon: Icons.person,
                     title: 'My Profile',
-                    onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SupervisorProfilePage(),
-                        ),
-                      );
-                    },
+                    page: const SupervisorProfilePage(),
                   ),
-                  _buildDrawerItem(
-                    context,
-                    icon: Icons.logout,
-                    title: 'Logout',
+
+                  /// ✅ FIXED LOGOUT
+                  ListTile(
+                    leading: const Icon(Icons.logout),
+                    title: const Text('Logout'),
                     onTap: () async {
-                      try {
-                        // 1️⃣ Close drawer first (important on mobile)
-                        Navigator.pop(context);
+                      Navigator.pop(context); // close drawer
 
-                        // 2️⃣ Sign out from Supabase
-                        await Supabase.instance.client.auth.signOut();
+                      // 🔥 reset app state
+                      themeProvider.resetToGuest();
 
-                        // 3️⃣ Clear navigation stack and go to login
-                        Navigator.pushNamedAndRemoveUntil(
-                          context,
-                          '/login', // replace with your actual login route if different
-                          (route) => false,
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Logout failed: $e')),
-                        );
-                      }
+                      // 🔐 sign out
+                      await Supabase.instance.client.auth.signOut();
+
+                      // ❌ NO navigation here
+                      // AuthGate will take over
                     },
                   ),
                 ],
@@ -165,25 +128,30 @@ class SupervisorLayout extends StatelessWidget {
           ],
         ),
       ),
-      body: Padding(padding: const EdgeInsets.all(16), child: child),
+
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
+      ),
     );
   }
 
-  Widget _buildDrawerItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      child: ListTile(
-        leading: Icon(icon),
-        title: Text(title),
-        onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        hoverColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-      ),
+  Widget _item(
+      BuildContext context, {
+        required IconData icon,
+        required String title,
+        required Widget page,
+      }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => page),
+        );
+      },
     );
   }
 }

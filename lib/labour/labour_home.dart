@@ -9,6 +9,7 @@ class LabourDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return LabourLayout(
       title: 'Dashboard',
+      currentIndex: 0,
       child: FutureBuilder<Map<String, dynamic>>(
         future: LabourService.fetchDashboard(),
         builder: (context, snap) {
@@ -17,6 +18,7 @@ class LabourDashboardPage extends StatelessWidget {
           }
 
           final d = snap.data!;
+          // print('Dashboard Data: $d');
 
           return SingleChildScrollView(
             child: Column(
@@ -36,7 +38,7 @@ class LabourDashboardPage extends StatelessWidget {
 
                 _InfoCard(
                   title: 'Advance Taken',
-                  value: '₹ ${d['total_advance']}',
+                  value: '₹ ${d['due_advance']}',
                   subtitle: 'This month',
                   icon: Icons.payments,
                   color: const Color(0xFFE64A19),
@@ -45,7 +47,7 @@ class LabourDashboardPage extends StatelessWidget {
 
                 _InfoCard(
                   title: 'Balance Due',
-                  value: '₹ ${d['balance_due']}',
+                  value: '₹ ${d['remaining_salary']}',
                   subtitle: 'To be received',
                   icon: Icons.savings,
                   color: const Color(0xFF388E3C),

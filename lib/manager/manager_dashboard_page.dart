@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manager_layout.dart';
-import 'manager_transactions_page.dart';
+// import 'manager_transactions_page.dart';
 import 'manager_payments_page.dart';
 import 'manager_labours_page.dart';
 class ManagerDashboardPage extends StatefulWidget {
@@ -117,7 +117,7 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                       MediaQuery.of(context).size.width > 800 ? 4 : 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1,
+                  childAspectRatio: 0.7,
                   children: [
                     _StatCard(
                       title: 'Total Labours',

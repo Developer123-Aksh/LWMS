@@ -43,8 +43,8 @@ class _ManagerTransactionsPageState extends State<ManagerTransactionsPage> {
       amount,
       payment_type,
       note,
-      users_paid_by:users!paid_by(name),
-      users_paid_to:users!paid_to(name)
+      users_paid_by:users!transactions_paid_by_fkey(name),
+      users_paid_to:users!transactions_paid_to_fkey(name)
     ''')
     .eq('organisation_id', me['organisation_id'])
     .order('created_at', ascending: false);

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../services/profile_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'manager_layout.dart';
+import '../services/profile_service.dart';
 
 class ManagerProfilePage extends StatefulWidget {
   const ManagerProfilePage({super.key});
@@ -10,42 +11,72 @@ class ManagerProfilePage extends StatefulWidget {
 }
 
 class _ManagerProfilePageState extends State<ManagerProfilePage> {
-  late Future<Map<String, dynamic>> _future;
+  late Future<Map<String, dynamic>> _profileFuture;
 
   @override
   void initState() {
     super.initState();
-    _future = ManagerService.fetchProfile();
+    _profileFuture = ManagerService.fetchProfile(); // ✅ FIXED
   }
 
   @override
   Widget build(BuildContext context) {
     return ManagerLayout(
       title: 'My Profile',
-      child: FutureBuilder(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.connectionState == ConnectionState.waiting) {
+      child: FutureBuilder<Map<String, dynamic>>(
+        future: _profileFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snap.hasError) {
-            return Center(child: Text(snap.error.toString()));
+
+          if (snapshot.hasError) {
+            return Center(child: Text(snapshot.error.toString()));
           }
 
-          final d = snap.data!;
+          final data = snapshot.data!;
+          final aadhar = data['aadhar_no'] ?? '-';
+
+          final venueText = data['venue_name'] == null
+              ? '-'
+              : data['venue_address'] != null
+                  ? '${data['venue_name']}, ${data['venue_address']}'
+                  : data['venue_name'];
+
           return SingleChildScrollView(
             child: Column(
               children: [
-                _header(context, d),
+                _header(context, data),
+                const SizedBox(height: 24),
+
                 _section(context, 'Personal Information', [
-                  _row('Organisation', d['org_name']),
-                  _row('Email', d['email_id']),
-                  _row('Mobile', d['mobile_no']),
-                  _row('Aadhaar', d['aadhar_no'] ?? '-'),
+                  _row(Icons.business, 'Organisation', data['org_name'] ?? '-'),
+                  _row(Icons.email, 'Email', data['email_id'] ?? '-'),
+                  _row(Icons.phone, 'Mobile', data['mobile_no'] ?? '-'),
+                  _row(Icons.credit_card, 'Aadhaar Number', aadhar),
                 ]),
+
+                const SizedBox(height: 16),
+
                 _section(context, 'Work Details', [
-                  _row('Site', d['venue_name'] ?? 'Not Assigned'),
-                  _row('Status', d['status']),
+                  _row(Icons.location_city, 'Assigned Site', venueText),
+                  _row(Icons.check_circle, 'Status', data['status']),
+                  _row(
+                    Icons.calendar_today,
+                    'Member Since',
+                    _formatDate(DateTime.parse(data['created_at'])),
+                  ),
+                ]),
+
+                const SizedBox(height: 16),
+
+                _section(context, 'Settings', [
+                  ListTile(
+                    leading: const Icon(Icons.security),
+                    title: const Text('Change Password'),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                    onTap: () => _showChangePasswordDialog(context),
+                  ),
                 ]),
               ],
             ),
@@ -55,31 +86,188 @@ class _ManagerProfilePageState extends State<ManagerProfilePage> {
     );
   }
 
-  Widget _header(BuildContext c, Map d) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const CircleAvatar(radius: 40, child: Icon(Icons.person, size: 40)),
-              const SizedBox(height: 12),
-              Text(d['name'], style: Theme.of(c).textTheme.titleLarge),
-              Text(d['role']),
-            ],
-          ),
-        ),
-      );
+  // ================= HEADER =================
 
-  Widget _section(BuildContext c, String t, List<Widget> ch) => Card(
+  Widget _header(BuildContext context, Map<String, dynamic> data) {
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Text(t, style: Theme.of(c).textTheme.titleMedium),
+            const CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
+            const SizedBox(height: 16),
+            Text(
+              data['name'],
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
-            ...ch,
+            const SizedBox(height: 6),
+            Chip(label: Text(data['role'])),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _showEditProfileDialog(context, data),
+              icon: const Icon(Icons.edit),
+              label: const Text('Edit Profile'),
+            ),
           ],
         ),
-      );
+      ),
+    );
+  }
 
-  Widget _row(String l, String v) => ListTile(title: Text(l), subtitle: Text(v));
+  // ================= EDIT =================
+
+  void _showEditProfileDialog(
+      BuildContext context, Map<String, dynamic> data) {
+    final nameCtrl = TextEditingController(text: data['name']);
+    final mobileCtrl =
+        TextEditingController(text: data['mobile_no'] ?? '');
+    final aadharCtrl =
+        TextEditingController(text: data['aadhar_no'] ?? '');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: mobileCtrl,
+              decoration: const InputDecoration(labelText: 'Mobile'),
+            ),
+            TextField(
+              controller: aadharCtrl,
+              decoration: const InputDecoration(labelText: 'Aadhaar'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await ManagerService.updateProfile( // ✅ FIXED
+                name: nameCtrl.text,
+                mobileNo: mobileCtrl.text,
+                aadharNo: aadharCtrl.text,
+              );
+
+              setState(() {
+                _profileFuture = ManagerService.fetchProfile(); // ✅ FIXED
+              });
+
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= PASSWORD =================
+
+  void _showChangePasswordDialog(BuildContext context) {
+    final p1 = TextEditingController();
+    final p2 = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Change Password'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: p1,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'New Password'),
+            ),
+            TextField(
+              controller: p2,
+              obscureText: true,
+              decoration: const InputDecoration(labelText: 'Confirm Password'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (p1.text != p2.text) return;
+
+              await Supabase.instance.client.auth
+                  .updateUser(UserAttributes(password: p1.text));
+
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ================= HELPERS =================
+
+  Widget _section(BuildContext context, String title, List<Widget> children) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              title,
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+          const Divider(height: 1),
+          ...children,
+        ],
+      ),
+    );
+  }
+  
+
+  Widget _row(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style:
+                        const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text(value, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime d) => '${d.day}/${d.month}/${d.year}';
 }

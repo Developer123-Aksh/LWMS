@@ -1,54 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:lwms/auth/login_page.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme_provider.dart';
+import '../auth/login_page.dart';
+
 import 'labour_home.dart';
 import 'labour_payments_page.dart';
 import 'labour_profile_page.dart';
 
-
 class LabourLayout extends StatelessWidget {
   final String title;
   final Widget child;
+  final int currentIndex; // ✅ SOURCE OF TRUTH
 
   const LabourLayout({
     super.key,
     required this.title,
     required this.child,
+    required this.currentIndex,
   });
 
-  int _currentIndex() {
-    switch (title) {
-      case 'Dashboard':
-        return 0;
-      case 'Payments':
-        return 1;
-      case 'My Profile':
-        return 2;
+  Widget _pageByIndex(int index) {
+    switch (index) {
+      case 0:
+        return const LabourDashboardPage();
+      case 1:
+        return const LabourPaymentsPage();
+      case 2:
+        return const LabourProfilePage();
       default:
-        return 0;
+        return const LabourDashboardPage();
     }
   }
 
-  void _navigate(BuildContext context, int index) {
-    Widget page;
+  void _navigateFromBottomNav(BuildContext context, int index) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => _pageByIndex(index)),
+    );
+  }
 
-    switch (index) {
-      case 0:
-        page = const LabourDashboardPage();
-        break;
-      case 1:
-        page = const LabourPaymentsPage();
-        break;
-      case 2:
-        page = const LabourProfilePage();
-        break;
-      default:
-        return;
-    }
-
+  void _navigateFromDrawer(BuildContext context, Widget page) {
+    Navigator.pop(context);
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => page),
@@ -57,13 +51,10 @@ class LabourLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    final themeProvider = context.read<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
-
-      // ================= APP BAR =================
       appBar: AppBar(
         title: Text(title),
         actions: [
@@ -74,30 +65,16 @@ class LabourLayout extends StatelessWidget {
         ],
       ),
 
-      // ================= BODY =================
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.all(16),
-              child: ConstrainedBox(
-                constraints:
-                    BoxConstraints(minHeight: constraints.maxHeight),
-                child: child,
-              ),
-            );
-          },
-        ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
       ),
 
-      // ================= BOTTOM NAV =================
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex(),
+        currentIndex: currentIndex, // ✅ ALWAYS CORRECT
         onTap: (index) {
-          if (index == _currentIndex()) return;
-          _navigate(context, index);
+          if (index == currentIndex) return;
+          _navigateFromBottomNav(context, index);
         },
         items: const [
           BottomNavigationBarItem(
@@ -113,6 +90,52 @@ class LabourLayout extends StatelessWidget {
             label: 'Profile',
           ),
         ],
+      ),
+
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(child: Text('Labour Panel')),
+            ListTile(
+              leading: const Icon(Icons.dashboard),
+              title: const Text('Dashboard'),
+              onTap: () =>
+                  _navigateFromDrawer(context, const LabourDashboardPage()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.payments),
+              title: const Text('Payments'),
+              onTap: () =>
+                  _navigateFromDrawer(context, const LabourPaymentsPage()),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person),
+              title: const Text('Profile'),
+              onTap: () =>
+                  _navigateFromDrawer(context, const LabourProfilePage()),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () async {
+                Navigator.pop(context);
+                themeProvider.resetToGuest();
+                await Supabase.instance.client.auth.signOut();
+
+                if (!context.mounted) return;
+
+                Navigator.of(context, rootNavigator: true)
+                    .pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => const LoginUIPage(),
+                  ),
+                  (_) => false,
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
