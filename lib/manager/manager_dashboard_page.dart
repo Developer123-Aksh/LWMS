@@ -39,21 +39,32 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
     final orgId = me['organisation_id'];
     final venueId = me['venue_id'];
 
-    final labours = await client
-        .from('users')
-        .select('id')
-        .eq('venue_id', venueId)
-        .eq('role', 'LABOUR');
+    int labourCount = 0;
+    int supervisorCount = 0;
 
-    final supervisors = await client
-        .from('users')
-        .select('id')
-        .eq('venue_id', venueId)
-        .eq('role', 'SUPERVISOR');
+    if (venueId != null) {
+      final labours = await client
+          .from('users')
+          .select('id')
+          .eq('venue_id', venueId)
+          .eq('role', 'LABOUR');
+
+      final supervisors = await client
+          .from('users')
+          .select('id')
+          .eq('venue_id', venueId)
+          .eq('role', 'SUPERVISOR');
+
+      labourCount = labours.length;
+      supervisorCount = supervisors.length;
+    }
 
     final today = DateTime.now();
-    final startOfDay =
-        DateTime(today.year, today.month, today.day).toIso8601String();
+    final startOfDay = DateTime(
+      today.year,
+      today.month,
+      today.day,
+    ).toIso8601String();
 
     final txToday = await client
         .from('transactions')
@@ -68,9 +79,9 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
 
     return _DashboardData(
       organisationName: me['organisations']['name'],
-      venueName: me['venues']?['name'] ?? 'Not Assigned',
-      labourCount: labours.length,
-      supervisorCount: supervisors.length,
+      venueName: me['venues']?['name'] ?? 'Site Not Assigned',
+      labourCount: labourCount,
+      supervisorCount: supervisorCount,
       todayPaid: todayPaid,
       todayTxCount: txToday.length,
     );
@@ -101,21 +112,20 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
           final data = snapshot.data!;
 
           return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildWelcomeCard(context, data),
-                const SizedBox(height: 24),
-
-                // ===== STATS =====
+                // ===== STATS GRID =====
                 GridView.count(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount:
-                      MediaQuery.of(context).size.width > 800 ? 4 : 2,
+                  crossAxisCount: MediaQuery.of(context).size.width > 800
+                      ? 4
+                      : 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 0.75,
+                  childAspectRatio: 0.7,
                   children: [
                     _StatCard(
                       title: 'Total Labours',
@@ -140,58 +150,12 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 32),
-
-                // ===== QUICK ACTIONS (BOTTOM) =====
                 _buildQuickActions(context),
-
-                const SizedBox(height: 24),
               ],
             ),
           );
         },
-      ),
-    );
-  }
-
-  // ================= WELCOME =================
-
-  Widget _buildWelcomeCard(BuildContext context, _DashboardData data) {
-    final hour = DateTime.now().hour;
-    String greeting = 'Good Morning';
-    if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
-    if (hour >= 17) greeting = 'Good Evening';
-
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '$greeting, Manager',
-                    style:
-                        Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${data.venueName} • ${data.organisationName}',
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.waving_hand, size: 48),
-          ],
-        ),
       ),
     );
   }
@@ -204,56 +168,55 @@ class _ManagerDashboardPageState extends State<ManagerDashboardPage> {
       children: [
         Text(
           'Quick Actions',
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _QuickActionButton(
-              icon: Icons.person_add,
-              label: 'Add Labour',
-              color: const Color(0xFF7B1FA2),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManagerTeamPage(),
-                  ),
-                );
-              },
-            ),
-            _QuickActionButton(
-              icon: Icons.payments,
-              label: 'Make Payment',
-              color: const Color(0xFFE64A19),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManagerPaymentsPage(),
-                  ),
-                );
-              },
-            ),
-            _QuickActionButton(
-              icon: Icons.receipt_long,
-              label: 'Transactions',
-              color: const Color(0xFF388E3C),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ManagerPaymentsPage(),
-                  ),
-                );
-              },
-            ),
-          ],
+
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _QuickActionButton(
+                icon: Icons.person_add,
+                label: 'Team',
+                color: const Color(0xFF7B1FA2),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ManagerTeamPage()),
+                  );
+                },
+              ),
+              _QuickActionButton(
+                icon: Icons.payments,
+                label: 'Payment',
+                color: const Color(0xFFE64A19),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManagerPaymentsPage(),
+                    ),
+                  );
+                },
+              ),
+              _QuickActionButton(
+                icon: Icons.receipt_long,
+                label: 'Transactions',
+                color: const Color(0xFF388E3C),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const ManagerPaymentsPage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -277,27 +240,25 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 28, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(40),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: color.withOpacity(0.15),
+              child: Icon(icon, size: 28, color: color),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -339,19 +300,18 @@ class _StatCard extends StatelessWidget {
             Text(
               value,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.bold,
-                  ),
+                color: color,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 8),
             Text(title),
             const SizedBox(height: 4),
             Text(
               trend,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodySmall
-                  ?.copyWith(color: Colors.grey[700]),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
             ),
           ],
         ),

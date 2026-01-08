@@ -106,7 +106,7 @@ class LoginUIPage extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (context) =>
-                                const RegisterOrganisationUIPage(),
+                                const RegisterOrgPage(),
                           ),
                         );
                       },

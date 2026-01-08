@@ -14,7 +14,6 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<AuthState>(
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
-        // ⏳ Waiting for Supabase
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -25,7 +24,6 @@ class AuthGate extends StatelessWidget {
 
         // 🔓 LOGGED OUT
         if (session == null) {
-          // IMPORTANT: reset theme ONLY here
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.read<ThemeProvider>().resetToGuest();
           });

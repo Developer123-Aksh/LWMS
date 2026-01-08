@@ -4,6 +4,7 @@ import '../services/profile_service.dart';
 import 'admin_payment_page.dart';
 import 'admin_transection_page.dart';
 import 'admin_users_page.dart';
+import 'admin_change_site_page.dart';
 
 class AdminDashboardPage extends StatelessWidget {
   const AdminDashboardPage({super.key});
@@ -31,12 +32,10 @@ class AdminDashboardPage extends StatelessWidget {
           final data = snapshot.data!;
 
           return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ===== WELCOME =====
-                _buildWelcomeCard(context, data['admin_name']),
-                const SizedBox(height: 24),
 
                 // ===== STATS =====
                 GridView.count(
@@ -46,7 +45,7 @@ class AdminDashboardPage extends StatelessWidget {
                       MediaQuery.of(context).size.width > 800 ? 4 : 2,
                   crossAxisSpacing: 16,
                   mainAxisSpacing: 16,
-                  childAspectRatio: 1,
+                  childAspectRatio: 0.9,
                   children: [
                     _StatCard(
                       title: 'Total Sites',
@@ -77,10 +76,8 @@ class AdminDashboardPage extends StatelessWidget {
 
                 const SizedBox(height: 32),
 
-                // ===== QUICK ACTIONS AT BOTTOM =====
+                // ===== QUICK ACTIONS (CIRCULAR ROW) =====
                 _buildQuickActions(context),
-
-                const SizedBox(height: 24),
               ],
             ),
           );
@@ -89,51 +86,6 @@ class AdminDashboardPage extends StatelessWidget {
     );
   }
 
-  // ===== WELCOME CARD =====
-  Widget _buildWelcomeCard(BuildContext context, String adminName) {
-    return Card(
-      elevation: 0,
-      color: Theme.of(context).colorScheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Welcome back, $adminName!',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onPrimaryContainer,
-                        ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Here\'s what\'s happening with your projects today.',
-                    style: TextStyle(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onPrimaryContainer
-                          .withOpacity(0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.waving_hand,
-              size: 48,
-              color: Theme.of(context).colorScheme.primary,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   // ===== QUICK ACTIONS =====
   Widget _buildQuickActions(BuildContext context) {
@@ -148,49 +100,64 @@ class AdminDashboardPage extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _QuickActionButton(
-              icon: Icons.person_add,
-              label: 'Add User',
-              color: const Color(0xFF1976D2),
-              onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AdminUsersPage()));
-              },
-            ),
-            _QuickActionButton(
-              icon: Icons.payments,
-              label: 'Make Payment',
-              color: const Color(0xFF388E3C),
-              onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AdminPaymentsPage()));
-              },
-            ),
-            _QuickActionButton(
-              icon: Icons.receipt_long,
-              label: 'Transactions',
-              color: const Color(0xFFE64A19),
-              onTap: () {
-                Navigator.push(
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _QuickActionButton(
+                icon: Icons.person_add,
+                label: 'Add User',
+                color: const Color(0xFF1976D2),
+                onTap: () {
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const AdminTransactionsPage()));
-              },
-            ),
-            _QuickActionButton(
-              icon: Icons.groups,
-              label: 'View Users',
-              color: const Color(0xFF7B1FA2),
-              onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const AdminUsersPage()));
-              },
-            ),
-          ],
+                      builder: (_) => const AdminUsersPage(),
+                    ),
+                  );
+                },
+              ),
+              _QuickActionButton(
+                icon: Icons.payments,
+                label: 'Payment',
+                color: const Color(0xFF388E3C),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminPaymentsPage(),
+                    ),
+                  );
+                },
+              ),
+              _QuickActionButton(
+                icon: Icons.receipt_long,
+                label: 'Transactions',
+                color: const Color(0xFFE64A19),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminTransactionsPage(),
+                    ),
+                  );
+                },
+              ),
+              _QuickActionButton(
+                icon: Icons.swap_horiz,
+                label: 'Move Site',
+                color: const Color(0xFF7B1FA2),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AdminChangeSitePage(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -213,17 +180,8 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
-          width: 1,
-        ),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -236,17 +194,12 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
                 ),
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color:
-                            Theme.of(context).textTheme.bodySmall?.color,
-                      ),
-                ),
+                Text(title),
               ],
             ),
           ],
@@ -272,30 +225,28 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        width: 160,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 28, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+    return Padding(
+      padding: const EdgeInsets.only(right: 16),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(40),
+            child: CircleAvatar(
+              radius: 36,
+              backgroundColor: color.withOpacity(0.15),
+              child: Icon(icon, size: 28, color: color),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ),
     );
   }

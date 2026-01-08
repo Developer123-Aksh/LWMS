@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme_provider.dart';
 import '../services/profile_service.dart';
@@ -17,21 +18,27 @@ class RoleRouter extends StatelessWidget {
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>>(
       future: ProfileService.fetchMe(),
-      builder: (context, s) {
-        if (s.connectionState == ConnectionState.waiting) {
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        if (!s.hasData || s.hasError) {
-          return const LoginUIPage();
+        // 🚨 PROFILE NOT READY / FAILED
+        if (!snapshot.hasData || snapshot.hasError) {
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            await Supabase.instance.client.auth.signOut();
+          });
+
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        final role = s.data!['role'];
+        final role = snapshot.data!['role'];
         final theme = context.read<ThemeProvider>();
 
-        // Set role ONCE, safely
         WidgetsBinding.instance.addPostFrameCallback((_) {
           switch (role) {
             case 'ADMIN':

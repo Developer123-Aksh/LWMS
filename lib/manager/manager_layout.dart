@@ -11,18 +11,20 @@ import 'manager_payments_page.dart';
 import 'manager_transactions_page.dart';
 import 'manager_profile_page.dart';
 
-// 🔐 LOGIN PAGE
-// import '../auth/login_page.dart';
-
 class ManagerLayout extends StatelessWidget {
   final String title;
   final Widget child;
 
-  const ManagerLayout({super.key, required this.title, required this.child});
+  const ManagerLayout({
+    super.key,
+    required this.title,
+    required this.child,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.read<ThemeProvider>();
+    // 🔧 MUST use watch so icon updates when theme toggles
+    final themeProvider = context.watch<ThemeProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -46,13 +48,18 @@ class ManagerLayout extends StatelessWidget {
                     Theme.of(context).colorScheme.primary,
                     Theme.of(context).colorScheme.primaryContainer,
                   ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: const [
-                  CircleAvatar(radius: 30, child: Icon(Icons.badge, size: 32)),
+                  CircleAvatar(
+                    radius: 30,
+                    child: Icon(Icons.badge, size: 32),
+                  ),
                   SizedBox(height: 12),
                   Text(
                     'Manager Panel',
@@ -106,13 +113,13 @@ class ManagerLayout extends StatelessWidget {
                     page: const ManagerProfilePage(),
                   ),
 
-                  /// ================= LOGOUT (FIXED) =================
+                  // ================= LOGOUT (CORRECT) =================
                   ListTile(
                     leading: const Icon(Icons.logout),
                     title: const Text('Logout'),
                     onTap: () async {
                       try {
-                        // Close drawer if present
+                        // Close drawer first
                         Navigator.of(context).pop();
 
                         // ONLY sign out
@@ -132,7 +139,10 @@ class ManagerLayout extends StatelessWidget {
         ),
       ),
 
-      body: Padding(padding: const EdgeInsets.all(16), child: child),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: child,
+      ),
     );
   }
 
@@ -146,7 +156,10 @@ class ManagerLayout extends StatelessWidget {
       leading: Icon(icon),
       title: Text(title),
       onTap: () {
-        Navigator.pop(context);
+        // Close drawer
+        Navigator.of(context).pop();
+
+        // Replace current page inside manager flow
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => page),
